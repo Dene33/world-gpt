@@ -1,0 +1,288 @@
+from dataclasses import dataclass, field
+from yamldataclassconfig.config import YamlDataClassConfig
+from yamldataclassconfig import create_file_path_field
+from pathlib import Path
+import numpy as np
+from utils import get_last_modified_file, bcolors, int_to_month, \
+    hour_to_pm_am, hour_to_daytime, Input, code_block_to_var, save_yaml, request_openai
+import validators
+from prompt_toolkit import prompt
+import prompts
+from enum import Enum
+from typing import Union
+import yaml
+import openai
+
+@dataclass
+class Settings(YamlDataClassConfig):
+    LLM_model: str = ''
+    API_key: str = ''
+    llm_request_tries_num: int = -1
+    cur_game_name: str = '' 
+    cur_world_name: str = '' 
+    init_prompt: str = ''
+    npc_history_steps: int = 0
+    world_history_steps: int = 0
+    num_global_goals: int = 0
+
+@dataclass
+class World(YamlDataClassConfig):
+    name: str = '' # name of the world
+    number_of_npcs: int = 0
+    tick_type: str = '' # years, months, days, hours, minutes, seconds, etc
+    tick_rate: int = 0 # how much time of tick_type passes in the world per tick
+    current_tick: int = 0 # indicates how many ticks passed
+    temperature: float = 0.0 # temperature of the world in Celsius
+    current_era: str = '' # era of the world
+    current_year: int = 0
+    current_month: int = 0
+    current_day: int = 0
+    current_hour: int = 0
+    current_minute: int = 0
+    current_second: int = 0 
+    current_state_prompt: str = ''
+
+@dataclass
+class Npc(YamlDataClassConfig):
+    name: str = ''
+    global_goal: str = ''
+    happiness: str = ''
+    love: str = ''
+    health: str = ''
+    rested: str = ''
+    wealth: str = ''
+    hunger: str = ''
+    stress: str = ''
+    current_state_prompt: str = ''
+
+@dataclass
+class GlobalGoals(YamlDataClassConfig):
+    global_goals: list[str] = field(default_factory=list)
+
+class Game():
+    def __init__(self):
+        # Settings
+        self.settings: Settings = Settings()
+        self.settings.load(path='./settings.yaml')
+        openai.api_key = self.settings.API_key
+        if not openai.api_key:
+            openai.api_key = prompt('Provide OpenAI API key: ', is_password=True)
+
+        # Paths
+        self.cur_game_path: Path = Path('./data') / self.settings.cur_game_name
+        self.cur_world_path: Path = Path('./data') / self.settings.cur_game_name / 'worlds' / self.settings.cur_world_name
+        self.cur_npcs_path: Path = self.cur_world_path / 'npcs'
+        self.cur_global_goals_path: Path = self.cur_world_path / 'global_goals.yaml'
+
+        # World
+        self.cur_world: World = World()
+        self.world_prompt: str = None
+        self.global_goals: GlobalGoals = GlobalGoals()
+
+        # Possible inputs
+        # self.init_game = Input.init_game
+        # self.init_world = Input.init_world
+        # self.init_npcs = Input.init_npcs
+    
+
+    def input_handler(self, user_input: Union[Input.init, Input.placeholder]):
+        if isinstance(user_input, Input.init):
+            self.input_handler_init(user_input)
+
+    def input_handler_init(self, user_input):
+        msg = f'You want to create {user_input}. Load the {user_input} or create a new one(s)? (l/n)'
+        response = prompt(msg, validator=validators.InitValidator(self, user_input))
+        
+        # Load
+        if response == 'l':
+            if user_input == Input.init.game:
+                pass
+            elif user_input == Input.init.world:
+                self.load_world()
+            # elif user_input == Input.init.npcs:
+            #     load_name = ''
+            load_name = getattr(self.settings, f'cur_{user_input}_name')
+            print(f'{bcolors.OKGREEN}{user_input.capitalize()} "{load_name}" loaded{bcolors.ENDC}')
+
+        # Create new
+        elif response == 'n':
+            if user_input == Input.init.game:
+                self.cur_game_path.mkdir(parents=True, exist_ok=True)
+                
+            elif user_input == Input.init.world:
+                self.new_world()
+                self.new_global_goals()
+                self.new_npcs()
+            # elif user_input == Input.init.npcs:
+            #     self.new_npcs()
+            #     new_name = ''
+
+            new_name = getattr(self.settings, f'cur_{user_input}_name')
+            print(f'{bcolors.OKGREEN}{user_input.capitalize()} {new_name} created{bcolors.ENDC}')
+
+    # def init_game_input_handler(self):
+    #     # Start new game or load existing
+    #     response = prompt(f'You want to start the game "{self.settings.cur_game_name}". Load the game or create a new one? (l/n)', validator=validators.GameValidator(self))
+    #     if response == 'l':
+    #         print(f'{bcolors.OKGREEN}Game "{self.settings.cur_game_name}" loaded{bcolors.ENDC}')
+    #     elif response == 'n':
+    #         self.cur_game_path.mkdir(parents=True, exist_ok=True)
+    #         print(f'{bcolors.OKGREEN}Game "{self.settings.cur_game_name}" created{bcolors.ENDC}')
+    
+    # def init_world_input_handler(self):
+    #     # Start new world or load existing
+    #     response = prompt(f'You want to start the world "{self.settings.cur_world_name}". Load the world or create a new one? (l/n)', validator=validators.WorldValidator(self))
+    #     if response == 'l':
+    #         self.load_world()
+    #         print(f'{bcolors.OKGREEN}World {self.settings.cur_world_name} loaded{bcolors.ENDC}')
+    #     elif response == 'n':
+    #         self.new_world()
+    #         print(f'{bcolors.OKGREEN}World {self.settings.cur_world_name} created{bcolors.ENDC}')
+
+    # def init_npcs_input_handler(self):
+    #     # Start new npcs or load existing
+    #     response = prompt(f'Load NPCs or create new ones? (l/n)', validator=validators.NpcValidator(self))
+    #     if response == 'l':
+    #         self.load_npcs()
+    #         print(f'{bcolors.OKGREEN}Npcs loaded{bcolors.ENDC}')
+    #     elif response == 'n':
+    #         self.new_npcs()
+    #         print(f'{bcolors.OKGREEN}Npcs created{bcolors.ENDC}')
+
+    def new_world(self):
+        self.cur_world.name = self.settings.cur_world_name
+        self.cur_world.number_of_npcs = int(prompt("Input the number of npcs you want to create: ",
+                                                validator=validators.is_number,
+                                                validate_while_typing=True))
+        self.cur_world.tick_type = prompt("Input tick type (years/months/days/hours/minutes/seconds): ",
+                                                validator=validators.is_tick_type,
+                                                validate_while_typing=True)
+        self.cur_world.tick_rate = int(prompt("Input the tick rate (how much time of tick_type passes in the world per tick): ",
+                                                validator=validators.is_number,
+                                                validate_while_typing=True))
+        self.cur_world.current_tick = 0
+        self.cur_world.temperature = float(prompt("Input the temperature (in Celsius) of the world at current tick: ",
+                                                validator=validators.is_float,
+                                                validate_while_typing=True))
+        self.cur_world.current_era = prompt("Input the current era (BC/AD) of the world: ",
+                                                validator=validators.is_era,
+                                                validate_while_typing=True)
+        self.cur_world.current_year = int(prompt("Input the current year of the world: ",
+                                             validator=validators.is_number,
+                                             validate_while_typing=True))
+        self.cur_world.current_month = int(prompt("Input the current month of the world: ",
+                                             validator=validators.is_month,
+                                             validate_while_typing=True))
+        self.cur_world.current_day = int(prompt("Input the current day of the world: ",
+                                             validator=validators.is_day,
+                                             validate_while_typing=True))
+        self.cur_world.current_hour = int(prompt("Input the current hour of the world: ",
+                                             validator=validators.is_hour,
+                                             validate_while_typing=True))
+        self.cur_world.current_minute = int(prompt("Input the current minute of the world: ",
+                                             validator=validators.is_minute,
+                                             validate_while_typing=True))
+        self.cur_world.current_second = int(prompt("Input the current second of the world: ",
+                                             validator=validators.is_second,
+                                             validate_while_typing=True))
+        self.cur_world.current_state_prompt = self.settings.init_prompt
+
+        
+        self.world_prompt = prompts.create_world.substitute(world_state_prompt=self.cur_world.current_state_prompt,
+                                                            temperature=self.cur_world.temperature,
+                                                            day=self.cur_world.current_day,
+                                                            month=int_to_month(self.cur_world.current_month),
+                                                            year=self.cur_world.current_year,
+                                                            era=self.cur_world.current_era,
+                                                            hour=self.cur_world.current_hour,
+                                                            minute=self.cur_world.current_minute,
+                                                            second=self.cur_world.current_second,
+                                                            pm_am=hour_to_pm_am(self.cur_world.current_hour),
+                                                            daytime=hour_to_daytime(self.cur_world.current_hour))
+        
+        self.save_world()
+        # self.create_npcs()
+    
+    def create_world_prompt(self):
+        pass
+        # llm_prompt = f"Now is {self.cur_world.current_day} of {int_to_month(self.cur_world.current_month)} \
+        #         {self.cur_world.current_year} {self.cur_world.current_era}. The time is \
+        #         {self.cur_world.current_hour}:{self.cur_world.current_minute}:{self.cur_world.current_second}. \
+        #         The temperature is {self.cur_world.temperature}C. \
+        #         The current state of the world is: {self.cur_world.current_state_prompt}"
+        # print(f'{bcolors.OKGREEN}{llm_prompt}{bcolors.ENDC}')
+
+        # return llm_prompt
+
+
+    def new_npcs(self):
+        # if not self.cur_global_goals_path.exists():
+        #     self.generate_global_goals()
+
+        if not self.cur_npcs_path.exists():
+            self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
+
+        # for npc_num in number_of_npcs:
+
+    def new_global_goals(self):
+        print(f'{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}')
+        create_global_goals_prompt = prompts.create_global_goals.substitute(world_prompt= self.world_prompt,
+                                                                     num_global_goals=self.settings.num_global_goals)
+
+        global_goals = request_openai(model=self.settings.LLM_model,
+                                      prompt=create_global_goals_prompt,
+                                      tries_num=self.settings.llm_request_tries_num,
+                                      response_processor=code_block_to_var)
+        
+        self.global_goals.global_goals = global_goals
+
+        self.save_global_goals()
+        print(f'{bcolors.OKGREEN}Global goals generated successfully{bcolors.ENDC}')
+
+    def create_npc_prompt(self):
+        pass
+        # multipl npcs
+        # Here is the world: A mid-sized village situated by the river in medieval Moldova. It has a self-sufficient community surrounded by a wooden palisade. There is a market square, a church, and fields for growing crops and grazing livestock. The villagers are engaged in crafts, and in times of war or danger, they rely on a small militia from nearby castle.
+
+# Create 3 NPCs for this world. Parse it to a .yaml files of the structure described below. Replace zeros and empty values with NPC's parameters. Each parameter can't be less than 0 and more than 10. Output only the constructed .yamls as code blocks without describing them. Do not output anything else.
+
+# name: ''
+# global_goal: ''
+# happiness: 0
+# love: 0
+# health: 0
+# rested: 0
+# wealth: 0
+# hunger: 0
+# stress: 0
+# current_state_prompt: ''
+
+        # 1 nps
+        # Create a NPC in the Medieval Moldova setting. Parse it to a .yaml file of the structure described below. Replace zeros and empty values with NPC's parameters. Each parameter can't be less than 0 and more than 10. Output only the constructed .yaml as code block without describing it
+        llm_prompt = f'Here is the world: {self.world_prompt}. \
+            Create a .yaml file of the structure described below for a NPC in the Medieval Moldova setting'
+
+    def load_world(self): 
+        world_yaml_path = get_last_modified_file(self.cur_world_path)
+        self.cur_world.load(path=world_yaml_path)
+
+    def save_world(self):
+        self.cur_world_path.mkdir(parents=True, exist_ok=True)
+        save_path = self.cur_world_path / f'world_tick_{self.cur_world.current_tick}.yaml'
+
+        save_yaml(save_path, self.cur_world)
+    
+    def save_global_goals(self):
+        save_yaml(self.cur_global_goals_path, self.global_goals)
+
+
+
+if __name__ == '__main__':
+    print(prompts.create_global_goals.safe_substitute())
+    # S = Settings()
+    # S.load(path='./settings.yaml')
+    # # settings = Settings.load(path='./settings.yaml')
+    # # print(S.API_key)
+    # t = np.datetime64('2002-02-03T13:56:03')
+    # print(t)
+    # # print(settings.part_config.property_c)

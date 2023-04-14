@@ -1,0 +1,10 @@
+name: ''
+global_goal: ''
+happiness: 0
+love: 0
+health: 0
+rested: 0
+wealth: 0
+hunger: 0
+stress: 0
+current_state_prompt: ''

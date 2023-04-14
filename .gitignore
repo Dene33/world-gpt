@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+non-public/
+.gitkeep
+*.pyc
+
+data/*
+!data/yaml_templates/
+TODO.md
