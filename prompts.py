@@ -8,20 +8,25 @@ Current date is $day $month $year $era
 Current time is $hour:$minute:$second $pm_am, $daytime"""
 )
 
-create_npcs = Template(
+create_npc = Template(
     """Here is the world: $world_prompt
 
 Temperature outside is $temperature
 Current date is $day $month $year $era
 Current time is $hour:$minute:$second $pm_am, $daytime
 
-Create $num_npcs NPCs for this world. Parse it to a .yaml files of the structure described below. \
+Create an NPC for this world. Parse it to a Dict of the structure described below.  \
 Replace zeros and empty values with NPC's parameters. Each parameter can't be less than 0 and more than 10. \
-Output only the constructed .yamls as individual code blocks without describing them. Do not output anything else.
+Output the constructed Dict, without describing it. Do not output anything else.
 
-$npc_yaml_template
+```python
+npc = $npc_yaml_template
+```
 
-NPCs are usually awake during the day. And they usually sleep at night. Take this into account in `current_state_prompt`."""
+NPCs are usually awake during the day. And they usually sleep at night. Take this into account in `current_state_prompt`.
+
+The global_goal for this NPC is `$global_goal`
+"""
 )
 
 create_global_goals = Template(

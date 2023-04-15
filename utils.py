@@ -104,7 +104,7 @@ def save_yaml(save_path: Path, data: YamlDataClassConfig):
 
 
 def request_openai(
-    model: str, prompt: str, tries_num: int = -1, response_processor=None
+    model: str, prompt: str, tries_num: int = -1, response_processor=None, verbose=False
 ):
     processed_response = None
 
@@ -122,8 +122,13 @@ def request_openai(
 
             # get the response
             response_content = response["choices"][0]["message"]["content"]
-            # print(response_content)
-            processed_response = response_processor(response_content)
+            if verbose:
+                print(response_content)
+            if response_processor:
+                processed_response = response_processor(response_content)
+            else:
+                processed_response = response_content
+
         except Exception as e:
             continue
         else:

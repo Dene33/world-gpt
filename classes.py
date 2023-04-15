@@ -21,6 +21,7 @@ from enum import Enum
 from typing import Union
 import yaml
 import openai
+import random
 
 
 @dataclass
@@ -91,7 +92,7 @@ class Game:
             / self.settings.cur_world_name
         )
         self.cur_npcs_path: Path = self.cur_world_path / "npcs"
-        self.cur_global_goals_path: Path = self.cur_world_path / "global_goals.yaml"
+        self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
 
         # World
         self.cur_world: World = World()
@@ -202,7 +203,7 @@ class Game:
 
         self.cur_world.current_hour = int(
             prompt(
-                "Input the current hour of the world: ",
+                "Input the current hour of the world (24h format): ",
                 validator=validators.is_hour,
                 validate_while_typing=True,
             )
@@ -244,13 +245,50 @@ class Game:
         # self.create_npcs()
 
     def new_npcs(self):
-        # if not self.cur_global_goals_path.exists():
-        #     self.generate_global_goals()
-
         if not self.cur_npcs_path.exists():
             self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
 
-        # for npc_num in number_of_npcs:
+        for npc_num in range(self.cur_world.number_of_npcs):
+            print(
+                f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.cur_world.number_of_npcs}...{bcolors.ENDC}"
+            )
+            new_npc = Npc()
+
+            with open("data/yaml_templates/npc.yaml", "r") as f:
+                npc_yaml_template = yaml.safe_load(f)
+
+            new_npc_prompt = prompts.create_npc.substitute(
+                world_prompt=self.world_prompt,
+                temperature=self.cur_world.temperature,
+                day=self.cur_world.current_day,
+                month=int_to_month(self.cur_world.current_month),
+                year=self.cur_world.current_year,
+                era=self.cur_world.current_era,
+                hour=self.cur_world.current_hour,
+                minute=self.cur_world.current_minute,
+                second=self.cur_world.current_second,
+                pm_am=hour_to_pm_am(self.cur_world.current_hour),
+                daytime=hour_to_daytime(self.cur_world.current_hour),
+                npc_yaml_template=npc_yaml_template,
+                global_goal=random.choice(self.global_goals.global_goals),
+            )
+
+            new_npc_data = request_openai(
+                model=self.settings.LLM_model,
+                prompt=new_npc_prompt,
+                tries_num=self.settings.llm_request_tries_num,
+                response_processor=code_block_to_var,
+                verbose=True,
+            )
+
+            for k, v in new_npc_data.items():
+                setattr(new_npc, k, v)
+
+            self.save_npc(new_npc)
+
+            print(
+                f"{bcolors.OKGREEN}NPC {new_npc.name} generated successfully{bcolors.ENDC}"
+            )
 
     def new_global_goals(self):
         print(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
@@ -284,7 +322,13 @@ class Game:
         save_yaml(save_path, self.cur_world)
 
     def save_global_goals(self):
+        self.cur_global_goals_path.parent.mkdir(parents=True, exist_ok=True)
         save_yaml(self.cur_global_goals_path, self.global_goals)
+
+    def save_npc(self, npc: Npc):
+        npc_dir = self.cur_npcs_path / npc.name
+        npc_dir.mkdir(parents=True, exist_ok=True)
+        save_yaml(npc_dir / f"npc_tick_{self.cur_world.current_tick}.yaml", npc)
 
 
 if __name__ == "__main__":
