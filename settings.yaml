@@ -1,23 +1,6 @@
 LLM_model: 'gpt-3.5-turbo'
 API_key: ''
 llm_request_tries_num: 5 # number of tries to get a response from LLM. -1 means infinite
-
-# name of the dir inside ./data containing `world` and `npcs` dirs. 
-# If game exists, continue from the last world state. If not, create new
-cur_game_name: Test_Game_2 
-
-# If game exists, name of the world to load state from
-# If no game exists, creates new world with that name 
-cur_world_name: Test_World 
-
-# Prompt to generate the world, if no game exists
-init_prompt: > 
-            A mid-sized village situated by the river in medieval Moldova.
-            It has a self-sufficient community surrounded by a wooden palisade.
-            There is a market square, a church, and fields for growing crops and grazing livestock.
-            The villagers are engaged in crafts, and in times of war or danger,
-            they rely on a small militia from nearby castle.
-
 npc_history_steps: 0 # number of previous npc states to store
 world_history_steps: 0 # number of previous world states to store
 num_global_goals: 25 # number of NPC global goals to generate, each NPC will choose one from that list

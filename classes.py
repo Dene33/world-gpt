@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from yamldataclassconfig.config import YamlDataClassConfig
-from yamldataclassconfig import create_file_path_field
 from pathlib import Path
 import numpy as np
 from utils import (
@@ -11,17 +10,18 @@ from utils import (
     hour_to_daytime,
     Input,
     code_block_to_var,
-    save_yaml,
+    save_yaml_from_dataclass,
     request_openai,
+    load_yaml_to_dataclass,
 )
 import validators
 from prompt_toolkit import prompt
 import prompts
-from enum import Enum
-from typing import Union
+from typing import List, Union
 import yaml
 import openai
 import random
+from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 
 
 @dataclass
@@ -29,9 +29,6 @@ class Settings(YamlDataClassConfig):
     LLM_model: str = ""
     API_key: str = ""
     llm_request_tries_num: int = -1
-    cur_game_name: str = ""
-    cur_world_name: str = ""
-    init_prompt: str = ""
     npc_history_steps: int = 0
     world_history_steps: int = 0
     num_global_goals: int = 0
@@ -84,62 +81,168 @@ class Game:
             openai.api_key = prompt("Provide OpenAI API key: ", is_password=True)
 
         # Paths
-        self.cur_game_path: Path = Path("./data") / self.settings.cur_game_name
-        self.cur_world_path: Path = (
-            Path("./data")
-            / self.settings.cur_game_name
-            / "worlds"
-            / self.settings.cur_world_name
-        )
-        self.cur_npcs_path: Path = self.cur_world_path / "npcs"
-        self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
+        self.game_path: Path = ""
+        self.cur_world_path: Path = ""
+        self.cur_npcs_path: Path = ""
+        self.cur_global_goals_path: Path = ""
+
+        # Game
+        self.game_name: str = ""
+        self.existing_games = [x.name for x in GAMES_PATH.iterdir() if x.is_dir()]
+        self.existing_init_worlds = [
+            x.name for x in INIT_WORLDS_PATH.iterdir() if x.is_file()
+        ]
 
         # World
         self.cur_world: World = World()
-        self.world_prompt: str = None
+        self.world_prompt: str = ""
         self.global_goals: GlobalGoals = GlobalGoals()
 
-    def input_handler(self, user_input: Union[Input.init, Input.placeholder]):
-        if isinstance(user_input, Input.init):
-            self.input_handler_init(user_input)
+    def input_handler(self, user_input: Input.init | Input.placeholder):
+        if user_input == Input.init.game:
+            self.init_game()
 
-    def input_handler_init(self, user_input):
-        msg = f"You want to create {user_input}. Load the {user_input} or create a new one(s)? (l/n)"
-        response = prompt(msg, validator=validators.InitValidator(self, user_input))
+        elif user_input == Input.init.world:
+            self.init_world()
 
-        # Load
-        if response == "l":
-            if user_input == Input.init.game:
-                pass
-            elif user_input == Input.init.world:
-                self.load_world()
-            # elif user_input == Input.init.npcs:
-            #     load_name = ''
-            load_name = getattr(self.settings, f"cur_{user_input}_name")
-            print(
-                f'{bcolors.OKGREEN}{user_input.capitalize()} "{load_name}" loaded{bcolors.ENDC}'
-            )
+        return
 
-        # Create new
-        elif response == "n":
-            if user_input == Input.init.game:
-                self.cur_game_path.mkdir(parents=True, exist_ok=True)
+    def init_game(self):
+        new_or_load = prompt(
+            f"You want to start a game. (L)oad the game or create a (n)ew one? (l/n)",
+            validator=validators.NotInListValidator(
+                ["N", "n", "new", "L", "l", "load"]
+            ),
+            validate_while_typing=True,
+        )
 
-            elif user_input == Input.init.world:
-                self.new_world()
-                self.new_global_goals()
-                self.new_npcs()
-            # elif user_input == Input.init.npcs:
-            #     self.new_npcs()
-            #     new_name = ''
+        # New Game
+        if new_or_load.lower() in ["n", "new"]:
+            self.new_game()
 
-            new_name = getattr(self.settings, f"cur_{user_input}_name")
-            print(
-                f"{bcolors.OKGREEN}{user_input.capitalize()} {new_name} created{bcolors.ENDC}"
-            )
+        # Load Game
+        elif new_or_load.lower() in ["l", "load"]:
+            self.load_game()
+
+        return
+
+    def new_game(self):
+        self.game_name = prompt(
+            f"Input the new game name: ",
+            validator=validators.IsInListValidator(self.existing_games),
+        )
+
+        self.game_path = GAMES_PATH / self.game_name
+        Path(self.game_path / "worlds").mkdir(parents=True, exist_ok=True)
+
+        print(f"{bcolors.OKGREEN}The game: {self.game_name} is created{bcolors.ENDC}")
+
+        return
+
+    def load_game(self):
+        self.is_in_existing_items(self.existing_games, "game", Input.init.game)
+
+        self.game_name = prompt(
+            f"Choose the game to load: {', '.join(self.existing_games)} :",
+            validator=validators.NotInListValidator(self.existing_games),
+        )
+        self.game_path = GAMES_PATH / self.game_name
+        self.existing_worlds = [
+            x.name for x in Path(self.game_path / "worlds").iterdir() if x.is_dir()
+        ]
+
+        print(f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}")
+
+        return
+
+    def init_world(self):
+        new_or_load = prompt(
+            f"(L)oad existing world or create a (n)ew one? (l/n)",
+            validator=validators.NotInListValidator(
+                ["N", "n", "new", "L", "l", "load"]
+            ),
+            validate_while_typing=True,
+        )
+
+        # New World
+        if new_or_load.lower() in ["n", "new"]:
+            self.new_world()
+
+        # Load World
+        elif new_or_load.lower() in ["l", "load"]:
+            self.load_world()
+
+        return
 
     def new_world(self):
-        self.cur_world.name = self.settings.cur_world_name
+        template_or_input = prompt(
+            f"Create a new world from the predefined (t)emplate or (i)nput world settings manually? (t/i)",
+            validator=validators.NotInListValidator(["t", "template", "i", "input"]),
+            validate_while_typing=True,
+        )
+
+        if template_or_input.lower() in ["t", "template"]:
+            self.new_world_from_template()
+        elif template_or_input.lower() in ["i", "input"]:
+            self.new_world_from_input()
+
+        self.cur_npcs_path: Path = self.cur_world_path / "npcs"
+        self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
+        self.new_global_goals()
+        self.new_npcs()
+
+        return
+
+    def new_world_from_template(self):
+        self.is_in_existing_items(self.existing_init_worlds, "world", Input.init.world)
+
+        world_template_name = prompt(
+            f"Choose the world template to load: {', '.join(self.existing_init_worlds)} ",
+            validator=validators.NotInListValidator(self.existing_init_worlds),
+        )
+
+        world_template_path = INIT_WORLDS_PATH / world_template_name
+        load_yaml_to_dataclass(self.cur_world, world_template_path)
+
+        if self.cur_world.name in self.existing_worlds:
+            self.cur_world.name = prompt(
+                f"World with name {self.cur_world.name} already exists. Choose a new name:",
+                validator=validators.IsInListValidator(self.existing_worlds),
+            )
+
+        self.cur_world_path = (
+            GAMES_PATH / self.game_name / "worlds" / self.cur_world.name
+        )
+        self.cur_world_path.mkdir(parents=True, exist_ok=True)
+
+        self.world_prompt = prompts.create_world.substitute(
+            world_state_prompt=self.cur_world.current_state_prompt,
+            temperature=self.cur_world.temperature,
+            day=self.cur_world.current_day,
+            month=int_to_month(self.cur_world.current_month),
+            year=self.cur_world.current_year,
+            era=self.cur_world.current_era,
+            hour=self.cur_world.current_hour,
+            minute=self.cur_world.current_minute,
+            second=self.cur_world.current_second,
+            pm_am=hour_to_pm_am(self.cur_world.current_hour),
+            daytime=hour_to_daytime(self.cur_world.current_hour),
+        )
+
+        self.save_world()
+
+        print(
+            f"{bcolors.OKGREEN}The world {self.cur_world.name} is loaded from template {world_template_name}{bcolors.ENDC}"
+        )
+
+        return
+
+    def new_world_from_input(self):
+        self.cur_world.name = prompt(
+            "Input the name of the world: ",
+            validator=validators.IsInListValidator(self.existing_worlds),
+        )
+
         self.cur_world.number_of_npcs = int(
             prompt(
                 "Input the number of npcs you want to create: ",
@@ -225,7 +328,9 @@ class Game:
             )
         )
 
-        self.cur_world.current_state_prompt = self.settings.init_prompt
+        self.cur_world.current_state_prompt = prompt(
+            "Input the description of the current World state: "
+        )
 
         self.world_prompt = prompts.create_world.substitute(
             world_state_prompt=self.cur_world.current_state_prompt,
@@ -241,8 +346,30 @@ class Game:
             daytime=hour_to_daytime(self.cur_world.current_hour),
         )
 
+        self.cur_world_path = (
+            GAMES_PATH / self.game_name / "worlds" / self.cur_world.name
+        )
+
         self.save_world()
-        # self.create_npcs()
+
+        print(
+            f"{bcolors.OKGREEN}The world {self.cur_world.name} is loaded from input{bcolors.ENDC}"
+        )
+
+        return
+
+    def load_world(self):
+        self.is_in_existing_items(self.existing_worlds, "world", Input.init.world)
+
+        world_name_to_load = prompt(
+            f"Choose the world to load: {', '.join(self.existing_worlds)} ",
+            validator=validators.NotInListValidator(self.existing_worlds),
+        )
+        self.cur_world_path = Path(self.game_path / "worlds" / world_name_to_load)
+        last_modified_world_yaml = get_last_modified_file(self.cur_world_path)
+        load_yaml_to_dataclass(self.cur_world, last_modified_world_yaml)
+
+        return
 
     def new_npcs(self):
         if not self.cur_npcs_path.exists():
@@ -254,7 +381,7 @@ class Game:
             )
             new_npc = Npc()
 
-            with open("data/yaml_templates/npc.yaml", "r") as f:
+            with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
                 npc_yaml_template = yaml.safe_load(f)
 
             new_npc_prompt = prompts.create_npc.substitute(
@@ -290,6 +417,8 @@ class Game:
                 f"{bcolors.OKGREEN}NPC {new_npc.name} generated successfully{bcolors.ENDC}"
             )
 
+        return
+
     def new_global_goals(self):
         print(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
         create_global_goals_prompt = prompts.create_global_goals.substitute(
@@ -309,9 +438,7 @@ class Game:
         self.save_global_goals()
         print(f"{bcolors.OKGREEN}Global goals generated successfully{bcolors.ENDC}")
 
-    def load_world(self):
-        world_yaml_path = get_last_modified_file(self.cur_world_path)
-        self.cur_world.load(path=world_yaml_path)
+        return
 
     def save_world(self):
         self.cur_world_path.mkdir(parents=True, exist_ok=True)
@@ -319,17 +446,31 @@ class Game:
             self.cur_world_path / f"world_tick_{self.cur_world.current_tick}.yaml"
         )
 
-        save_yaml(save_path, self.cur_world)
+        save_yaml_from_dataclass(save_path, self.cur_world)
+
+        return
 
     def save_global_goals(self):
         self.cur_global_goals_path.parent.mkdir(parents=True, exist_ok=True)
-        save_yaml(self.cur_global_goals_path, self.global_goals)
+        save_yaml_from_dataclass(self.cur_global_goals_path, self.global_goals)
+
+        return
 
     def save_npc(self, npc: Npc):
         npc_dir = self.cur_npcs_path / npc.name
         npc_dir.mkdir(parents=True, exist_ok=True)
-        save_yaml(npc_dir / f"npc_tick_{self.cur_world.current_tick}.yaml", npc)
+        save_yaml_from_dataclass(
+            npc_dir / f"npc_tick_{self.cur_world.current_tick}.yaml", npc
+        )
 
+        return
 
-if __name__ == "__main__":
-    print(prompts.create_global_goals.safe_substitute())
+    def is_in_existing_items(
+        self, existing_items: List | None, item_name: str, input_type: Input
+    ):
+        if not existing_items:
+            print(
+                f"{bcolors.FAIL}No existing {item_name}s found. Create a new {item_name}.{bcolors.ENDC}"
+            )
+            self.input_handler(input_type)
+            return

@@ -25,14 +25,22 @@ class InitInput(StrEnum):
     npcs = "npcs"
 
 
+class InitPlaceholder(StrEnum):
+    placeholder = "placeholder"
+
+
 class Input:
     init = InitInput
-    placeholder = "placeholder"
+    placeholder = InitPlaceholder
 
 
 def get_last_modified_file(path):
     files = [f for f in Path(path).iterdir() if f.is_file()]
-    return max(files, key=lambda p: p.stat().st_mtime)
+    if files:
+        last_modified_file = max(files, key=lambda p: p.stat().st_mtime)
+    else:
+        last_modified_file = None
+    return last_modified_file
 
 
 def int_to_month(month: int):
@@ -97,10 +105,19 @@ def code_block_to_var(code_block: str):
     return var
 
 
-def save_yaml(save_path: Path, data: YamlDataClassConfig):
+def save_yaml_from_dataclass(save_path: Path, data: YamlDataClassConfig):
     yaml.emitter.Emitter.process_tag = lambda self, *args, **kw: None
     with open(save_path, "w") as savefile:
         yaml.dump(data, savefile)
+
+
+def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path):
+    if yaml_path:
+        yaml_dataclass.load(path=yaml_path)
+    else:
+        print(f"Can't load yaml from path: {yaml_path}, path doesn't exist")
+
+    return
 
 
 def request_openai(
@@ -141,6 +158,12 @@ def request_openai(
         return None
 
     return processed_response
+
+
+def ensure_dirs_exist(dirs: list[Path]):
+    for dir in dirs:
+        if not dir.exists():
+            dir.mkdir(parents=True, exist_ok=True)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,9 @@
 from prompt_toolkit.validation import Validator, ValidationError
 from prompt_toolkit.formatted_text import HTML
 from utils import bcolors, Input
+from pathlib import Path
+from prompt_toolkit import prompt
+from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 
 
 def _is_number(text: str):
@@ -80,23 +83,27 @@ is_second = Validator.from_callable(
 )
 
 
-class InitValidator(Validator):
-    def __init__(self, game, user_input: Input):
-        self.game = game
-        self.user_input = user_input
+class NotInListValidator(Validator):
+    def __init__(self, list_to_check: list):
+        self.list_to_check = list_to_check
 
     def validate(self, document):
         text = document.text
 
-        if text == "l":
-            if not getattr(self.game, f"cur_{self.user_input}_path").exists():
-                raise ValidationError(
-                    message=f'{self.user_input} with {getattr(self.game.settings, f"cur_{self.user_input}_name")} name does not exist. Try again'
-                )
-        elif text == "n":
-            if getattr(self.game, f"cur_{self.user_input}_path").exists():
-                raise ValidationError(
-                    message=f'{self.user_input} with {getattr(self.game.settings, f"cur_{self.user_input}_name")} name already exists. Try again'
-                )
-        else:
-            raise ValidationError(message="Invalid input (l/n). Try again")
+        if text not in self.list_to_check:
+            raise ValidationError(
+                message=f"{text} does not exist in {self.list_to_check}. Try again"
+            )
+
+
+class IsInListValidator(Validator):
+    def __init__(self, list_to_check: list):
+        self.list_to_check = list_to_check
+
+    def validate(self, document):
+        text = document.text
+
+        if text in self.list_to_check:
+            raise ValidationError(
+                message=f"{text} already exists in {self.list_to_check}. Try again"
+            )

@@ -1,0 +1,20 @@
+current_day: 1
+current_era: AD
+current_hour: 0
+current_minute: 9
+current_month: 9
+current_second: 0
+current_state_prompt: 'A mid-sized village situated by the river in medieval Moldova.
+  It has a self-sufficient community surrounded by a wooden palisade. There is a market
+  square, a church, and fields for growing crops and grazing livestock. The villagers
+  are engaged in crafts, and in times of war or danger, they rely on a small militia
+  from nearby castle.
+
+  '
+current_tick: 0
+current_year: 1000
+name: Test_World
+number_of_npcs: 5
+temperature: 20.0
+tick_rate: 1
+tick_type: months
