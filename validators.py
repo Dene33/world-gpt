@@ -11,7 +11,7 @@ def _is_number(text: str):
 
 
 def _is_tick_type(text: str):
-    return text in ("years", "months", "days", "hours", "minutes", "seconds")
+    return text in ("day", "hour", "minute", "second")
 
 
 def _is_float(text: str):
