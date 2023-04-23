@@ -17,4 +17,4 @@ name: Test_World
 number_of_npcs: 5
 temperature: 20.0
 tick_rate: 1
-tick_type: months
+tick_type: day
