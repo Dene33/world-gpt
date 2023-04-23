@@ -20,19 +20,19 @@ class bcolors:
     UNDERLINE = "\033[4m"
 
 
-class InitInput(StrEnum):
-    game = "game"
-    world = "world"
-    npcs = "npcs"
+class Input(StrEnum):
+    init_game = "init_game"
+    init_world = "init_world"
+    init_npcs = "init_npcs"
 
+    tick_increment = "tick_increment"
 
-class TickInput(StrEnum):
-    increment = "increment"
+    info_game = "info_game"
+    info_world = "info_world"
+    info_npcs = "info_npcs"
+    info_everything = "info_everything"
 
-
-class Input:
-    init = InitInput
-    tick = TickInput
+    quit_game = "quit_game"
 
 
 def get_last_modified_file(path):

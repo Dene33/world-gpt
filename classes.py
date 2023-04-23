@@ -27,6 +27,7 @@ import yaml
 import openai
 import random
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
+import sys
 
 
 @dataclass
@@ -61,13 +62,13 @@ class World(YamlDataClassConfig):
 class Npc(YamlDataClassConfig):
     name: str = ""
     global_goal: str = ""
-    happiness: str = ""
-    love: str = ""
-    health: str = ""
-    rested: str = ""
-    wealth: str = ""
-    hunger: str = ""
-    stress: str = ""
+    happiness: int = 0
+    love: int = 0
+    health: int = 0
+    rested: int = 0
+    wealth: int = 0
+    hunger: int = 0
+    stress: int = 0
     current_state_prompt: str = ""
 
 
@@ -103,29 +104,114 @@ class Game:
         self.world_prompt: str = ""
         self.global_goals: GlobalGoals = GlobalGoals()
 
-    def input_handler(self, user_input: Input.init | Input.tick):
-        if user_input == Input.init.game:
+        # Npcs
+        self.npcs: List[Npc] = []
+
+    def input_handler(self, user_input: Input):
+        if user_input == Input.init_game:
             self.init_game()
 
-        elif user_input == Input.init.world:
+        elif user_input == Input.init_world:
             self.init_world()
 
-        elif user_input == Input.tick.increment:
+        elif user_input == Input.tick_increment:
             self.tick_increment()
             self.save_world()
+
+        elif user_input == Input.info_world:
+            self.print_info_world()
+
+        elif user_input == Input.info_npcs:
+            self.print_info_npcs()
+
+        elif user_input == Input.info_everything:
+            self.print_info_all()
+
+        elif user_input == Input.quit_game:
+            self.quit_game()
+
+        return
+
+    def print_info_world(self):
+        self.print_current_time()
+
+        npc_names = [npc.name for npc in self.npcs]
+        print(
+            f"\n"
+            f"{bcolors.OKBLUE}World name: {bcolors.ENDC}{self.cur_world.name}\n"
+            f"{bcolors.OKBLUE}Current state: {bcolors.ENDC}{self.cur_world.current_state_prompt}\n"
+            f"{bcolors.OKBLUE}Temperature: {bcolors.ENDC}{self.cur_world.temperature}\n"
+            f"{bcolors.OKBLUE}Current tick: {bcolors.ENDC}{self.cur_world.current_tick}\n"
+            f"{bcolors.OKBLUE}Tick type: {bcolors.ENDC}{self.cur_world.tick_type}\n"
+            f"{bcolors.OKBLUE}Tick rate: {bcolors.ENDC}{self.cur_world.tick_rate}\n"
+            f"{bcolors.OKBLUE}Number of NPCs: {bcolors.ENDC}{self.cur_world.number_of_npcs}\n"
+            f"{bcolors.OKBLUE}NPCs: {bcolors.ENDC}{npc_names}"
+            f"\n"
+        )
+
+        return
+
+    def print_info_npcs(self):
+        for npc in self.npcs:
+            print(
+                f"\n"
+                f"{bcolors.OKBLUE}NPC name: {bcolors.ENDC}{npc.name}\n"
+                f"{bcolors.OKBLUE}Current state: {bcolors.ENDC}{npc.current_state_prompt}\n"
+                f"{bcolors.OKBLUE}Global goal: {bcolors.ENDC}{npc.global_goal}\n"
+                f"{bcolors.OKBLUE}Happiness: {bcolors.ENDC}{npc.happiness}\n"
+                f"{bcolors.OKBLUE}Love: {bcolors.ENDC}{npc.love}\n"
+                f"{bcolors.OKBLUE}Health: {bcolors.ENDC}{npc.health}\n"
+                f"{bcolors.OKBLUE}Rested: {bcolors.ENDC}{npc.rested}\n"
+                f"{bcolors.OKBLUE}Wealth: {bcolors.ENDC}{npc.wealth}\n"
+                f"{bcolors.OKBLUE}Hunger: {bcolors.ENDC}{npc.hunger}\n"
+                f"{bcolors.OKBLUE}Stress: {bcolors.ENDC}{npc.stress}"
+                f"\n"
+            )
+
+        return
+
+    def print_info_all(self):
+        self.print_info_world()
+        self.print_info_npcs()
+
+        return
+
+    def prompt_next_action(self):
+        next_action = prompt(
+            "What would you like to do next? ",
+            bottom_toolbar=f"(W)ait {self.cur_world.tick_rate} {self.cur_world.tick_type}s/(A)ll info/World (i)nfo/(N)PCs info/(Q)uit",
+            validator=validators.NotInListValidator(
+                ["W", "w", "A", "a", "I", "i", "N", "n", "Q", "q"]
+            ),
+            validate_while_typing=True,
+        )
+
+        if next_action in ["W", "w"]:
+            next_action = Input.tick_increment
+        elif next_action in ["A", "a"]:
+            next_action = Input.info_everything
+        elif next_action in ["I", "i"]:
+            next_action = Input.info_world
+        elif next_action in ["N", "n"]:
+            next_action = Input.info_npcs
+        elif next_action in ["Q", "q"]:
+            next_action = Input.quit_game
+        self.input_handler(next_action)
 
         return
 
     def print_current_time(self):
         current_time = (
             f"{bcolors.OKBLUE}"
-            f"Current time: {self.cur_world.current_day} {int_to_month(self.cur_world.current_month)},"
-            f"{self.cur_world.current_year} {self.cur_world.current_era} \n"
+            f"Current time:{bcolors.ENDC} {self.cur_world.current_day} {int_to_month(self.cur_world.current_month)},"
+            f"{self.cur_world.current_year} {self.cur_world.current_era}. "
             f"{hour_to_iso(self.cur_world.current_hour)}:{minute_to_iso(self.cur_world.current_minute)}:"
-            f"{second_to_iso(self.cur_world.current_second)}{bcolors.ENDC}"
+            f"{second_to_iso(self.cur_world.current_second)}"
         )
 
         print(current_time)
+
+        return
 
     def tick_increment(self):
         self.cur_time = to_datetime(
@@ -137,35 +223,33 @@ class Game:
             self.cur_world.current_second,
         )
 
+        self.cur_world.current_tick += 1
+
+        if self.cur_world.tick_type == "day":
+            timeformat = self.cur_world.tick_type[0].capitalize()
+        else:
+            timeformat = self.cur_world.tick_type[0]
+
+        time_delta = np.timedelta64(self.cur_world.tick_rate, timeformat)
+
+        new_time = self.cur_time + time_delta
+
+        (
+            self.cur_world.current_year,
+            self.cur_world.current_month,
+            self.cur_world.current_day,
+            self.cur_world.current_hour,
+            self.cur_world.current_minute,
+            self.cur_world.current_second,
+            self.cur_world.current_era,
+        ) = from_datetime(new_time)
+
+        print(
+            f"{bcolors.OKGREEN}{self.cur_world.tick_rate} {self.cur_world.tick_type}s have passed...{bcolors.ENDC}"
+        )
         self.print_current_time()
 
-        tick_increment = prompt(
-            f"{self.cur_world.tick_rate} {self.cur_world.tick_type}(s) will pass. Continue? (y/n)",
-            validator=validators.NotInListValidator(["Y", "y", "yes", "N", "n", "no"]),
-            validate_while_typing=True,
-        )
-
-        if tick_increment.lower() in ["y", "yes"]:
-            self.cur_world.current_tick += 1
-
-            if self.cur_world.tick_type == "day":
-                timeformat = self.cur_world.tick_type[0].capitalize()
-            else:
-                timeformat = self.cur_world.tick_type[0]
-
-            time_delta = np.timedelta64(self.cur_world.tick_rate, timeformat)
-
-            new_time = self.cur_time + time_delta
-
-            (
-                self.cur_world.current_year,
-                self.cur_world.current_month,
-                self.cur_world.current_day,
-                self.cur_world.current_hour,
-                self.cur_world.current_minute,
-                self.cur_world.current_second,
-                self.cur_world.current_era,
-            ) = from_datetime(new_time)
+        return
 
     def init_game(self):
         new_or_load = prompt(
@@ -204,7 +288,7 @@ class Game:
         return
 
     def load_game(self):
-        self.is_in_existing_items(self.existing_games, "game", Input.init.game)
+        self.is_in_existing_items(self.existing_games, "game", Input.init_game)
 
         self.game_name = prompt(
             f"Choose the game to load: {', '.join(self.existing_games)} :",
@@ -229,9 +313,15 @@ class Game:
         if new_or_load.lower() in ["n", "new"]:
             self.new_world()
 
+            self.cur_npcs_path: Path = self.cur_world_path / "npcs"
+            self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
+            self.new_global_goals()
+            self.new_npcs()
+
         # Load World
         elif new_or_load.lower() in ["l", "load"]:
             self.load_world()
+            self.load_npcs()
 
         return
 
@@ -247,15 +337,10 @@ class Game:
         elif template_or_input.lower() in ["i", "input"]:
             self.new_world_from_input()
 
-        self.cur_npcs_path: Path = self.cur_world_path / "npcs"
-        self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
-        self.new_global_goals()
-        self.new_npcs()
-
         return
 
     def new_world_from_template(self):
-        self.is_in_existing_items(self.existing_init_worlds, "world", Input.init.world)
+        self.is_in_existing_items(self.existing_init_worlds, "world", Input.init_world)
 
         world_template_name = prompt(
             f"Choose the world template to load: {', '.join(self.existing_init_worlds)} ",
@@ -293,7 +378,7 @@ class Game:
         self.save_world()
 
         print(
-            f"{bcolors.OKGREEN}The world {self.cur_world.name} is loaded from template {world_template_name}{bcolors.ENDC}"
+            f"{bcolors.OKGREEN}The world {self.cur_world.name} is created from template {world_template_name}{bcolors.ENDC}"
         )
 
         return
@@ -420,7 +505,7 @@ class Game:
         return
 
     def load_world(self):
-        self.is_in_existing_items(self.existing_worlds, "world", Input.init.world)
+        self.is_in_existing_items(self.existing_worlds, "world", Input.init_world)
 
         world_name_to_load = prompt(
             f"Choose the world to load: {', '.join(self.existing_worlds)} ",
@@ -429,6 +514,10 @@ class Game:
         self.cur_world_path = Path(self.game_path / "worlds" / world_name_to_load)
         last_modified_world_yaml = get_last_modified_file(self.cur_world_path)
         load_yaml_to_dataclass(self.cur_world, last_modified_world_yaml)
+
+        print(
+            f"{bcolors.OKGREEN}The world: {self.cur_world.name} is loaded{bcolors.ENDC}"
+        )
 
         return
 
@@ -441,6 +530,7 @@ class Game:
                 f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.cur_world.number_of_npcs}...{bcolors.ENDC}"
             )
             new_npc = Npc()
+            self.npcs.append(new_npc)
 
             with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
                 npc_yaml_template = yaml.safe_load(f)
@@ -479,6 +569,18 @@ class Game:
             )
 
         return
+
+    def load_npcs(self):
+        self.cur_npcs_path = self.cur_world_path / "npcs"
+
+        for npc_path in self.cur_npcs_path.iterdir():
+            if npc_path.name == "global_goals.yaml":
+                continue
+
+            new_npc = Npc()
+            last_modified_npc_yaml = get_last_modified_file(npc_path)
+            load_yaml_to_dataclass(new_npc, last_modified_npc_yaml)
+            self.npcs.append(new_npc)
 
     def new_global_goals(self):
         print(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
@@ -535,3 +637,7 @@ class Game:
             )
             self.input_handler(input_type)
             return
+
+    def quit_game(self):
+        print(f"{bcolors.OKCYAN}Quitting game...{bcolors.ENDC}")
+        sys.exit(0)

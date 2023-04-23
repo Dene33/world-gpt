@@ -9,15 +9,16 @@ def main():
 
     game = Game()
 
-    game.input_handler(Input.init.game)
-    game.input_handler(Input.init.world)
+    game.input_handler(Input.init_game)
+    game.input_handler(Input.init_world)
     # game.input_handler(Input.init.npcs)
 
-    print(game.cur_world)
-    print(game.global_goals)
+    # print(game.cur_world)
+    # print(game.global_goals)
 
     while True:
-        game.input_handler(Input.tick.increment)
+        game.prompt_next_action()
+        # game.input_handler(Input.tick.increment)
 
 
 if __name__ == "__main__":
