@@ -16,6 +16,9 @@ def main():
     print(game.cur_world)
     print(game.global_goals)
 
+    while True:
+        game.input_handler(Input.tick.increment)
+
 
 if __name__ == "__main__":
     main()

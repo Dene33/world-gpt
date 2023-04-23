@@ -5,6 +5,7 @@ from yamldataclassconfig.config import YamlDataClassConfig
 import yaml
 import openai
 import itertools
+import numpy as np
 
 
 class bcolors:
@@ -25,13 +26,13 @@ class InitInput(StrEnum):
     npcs = "npcs"
 
 
-class InitPlaceholder(StrEnum):
-    placeholder = "placeholder"
+class TickInput(StrEnum):
+    increment = "increment"
 
 
 class Input:
     init = InitInput
-    placeholder = InitPlaceholder
+    tick = TickInput
 
 
 def get_last_modified_file(path):
@@ -166,9 +167,158 @@ def ensure_dirs_exist(dirs: list[Path]):
             dir.mkdir(parents=True, exist_ok=True)
 
 
-if __name__ == "__main__":
-    t = Input.init.game
+def month_to_iso(month: int):
+    if month == 1:
+        return "01"
+    elif month == 2:
+        return "02"
+    elif month == 3:
+        return "03"
+    elif month == 4:
+        return "04"
+    elif month == 5:
+        return "05"
+    elif month == 6:
+        return "06"
+    elif month == 7:
+        return "07"
+    elif month == 8:
+        return "08"
+    elif month == 9:
+        return "09"
+    elif month == 10:
+        return "10"
+    elif month == 11:
+        return "11"
+    elif month == 12:
+        return "12"
+    else:
+        return "Invalid month"
 
-    if isinstance(t, Input.init):
-        if t == Input.init.game:
-            print(t)
+
+def day_to_iso(day: int):
+    if day == 1:
+        return "01"
+    elif day == 2:
+        return "02"
+    elif day == 3:
+        return "03"
+    elif day == 4:
+        return "04"
+    elif day == 5:
+        return "05"
+    elif day == 6:
+        return "06"
+    elif day == 7:
+        return "07"
+    elif day == 8:
+        return "08"
+    elif day == 9:
+        return "09"
+    elif day >= 10 and day <= 31:
+        return str(day)
+    else:
+        return "Invalid day"
+
+
+def hour_to_iso(hour: int):
+    if hour == 0:
+        return "00"
+    elif hour == 1:
+        return "01"
+    elif hour == 2:
+        return "02"
+    elif hour == 3:
+        return "03"
+    elif hour == 4:
+        return "04"
+    elif hour == 5:
+        return "05"
+    elif hour == 6:
+        return "06"
+    elif hour == 7:
+        return "07"
+    elif hour == 8:
+        return "08"
+    elif hour == 9:
+        return "09"
+    elif hour >= 10 and hour <= 23:
+        return str(hour)
+    else:
+        return "Invalid hour"
+
+
+def minute_to_iso(minute: int):
+    if minute == 0:
+        return "00"
+    elif minute == 1:
+        return "01"
+    elif minute == 2:
+        return "02"
+    elif minute == 3:
+        return "03"
+    elif minute == 4:
+        return "04"
+    elif minute == 5:
+        return "05"
+    elif minute == 6:
+        return "06"
+    elif minute == 7:
+        return "07"
+    elif minute == 8:
+        return "08"
+    elif minute == 9:
+        return "09"
+    elif minute >= 10 and minute <= 59:
+        return str(minute)
+    else:
+        return "Invalid minute"
+
+
+second_to_iso = hour_to_iso
+
+
+def to_datetime(
+    year: int,
+    month: int,
+    day: int,
+    hour: int = 0,
+    minute: int = 0,
+    second: int = 0,
+    era: str = "AD",
+):
+    if era == "BC":
+        year = -(year - 1)
+
+    return np.datetime64(
+        f"{year}-{month_to_iso(month)}-{(day_to_iso(day))}T{hour_to_iso(hour)}:{minute_to_iso(minute)}:{second_to_iso(second)}"
+    )
+
+
+def from_datetime(datetime: np.datetime64):
+    datetime_str = datetime.astype("str")
+    if datetime_str.startswith("-"):
+        era = "BC"
+        datetime_str = datetime_str[1:]
+    else:
+        era = "AD"
+
+    year_month_day = datetime_str.split("T")[0]
+    year, month, day = year_month_day.split("-")
+
+    hour_minute_second = datetime_str.split("T")[1]
+    hour, minute, second = hour_minute_second.split(":")
+
+    return int(year), int(month), int(day), int(hour), int(minute), int(second), era
+
+
+if __name__ == "__main__":
+    dt = to_datetime(month=1, day=1, year=20000, era="AD")
+
+    print(dt)
+    delta = np.timedelta64(365, "D")
+
+    t = dt + delta + delta
+    print(t)
+    year, month, day, hour, minute, second, era = from_datetime(t)
+    print(year, month, day, hour, minute, second, era)

@@ -13,6 +13,11 @@ from utils import (
     save_yaml_from_dataclass,
     request_openai,
     load_yaml_to_dataclass,
+    to_datetime,
+    from_datetime,
+    hour_to_iso,
+    minute_to_iso,
+    second_to_iso,
 )
 import validators
 from prompt_toolkit import prompt
@@ -98,14 +103,69 @@ class Game:
         self.world_prompt: str = ""
         self.global_goals: GlobalGoals = GlobalGoals()
 
-    def input_handler(self, user_input: Input.init | Input.placeholder):
+    def input_handler(self, user_input: Input.init | Input.tick):
         if user_input == Input.init.game:
             self.init_game()
 
         elif user_input == Input.init.world:
             self.init_world()
 
+        elif user_input == Input.tick.increment:
+            self.tick_increment()
+            self.save_world()
+
         return
+
+    def print_current_time(self):
+        current_time = (
+            f"{bcolors.OKBLUE}"
+            f"Current time: {self.cur_world.current_day} {int_to_month(self.cur_world.current_month)},"
+            f"{self.cur_world.current_year} {self.cur_world.current_era} \n"
+            f"{hour_to_iso(self.cur_world.current_hour)}:{minute_to_iso(self.cur_world.current_minute)}:"
+            f"{second_to_iso(self.cur_world.current_second)}{bcolors.ENDC}"
+        )
+
+        print(current_time)
+
+    def tick_increment(self):
+        self.cur_time = to_datetime(
+            self.cur_world.current_year,
+            self.cur_world.current_month,
+            self.cur_world.current_day,
+            self.cur_world.current_hour,
+            self.cur_world.current_minute,
+            self.cur_world.current_second,
+        )
+
+        self.print_current_time()
+
+        tick_increment = prompt(
+            f"{self.cur_world.tick_rate} {self.cur_world.tick_type}(s) will pass. Continue? (y/n)",
+            validator=validators.NotInListValidator(["Y", "y", "yes", "N", "n", "no"]),
+            validate_while_typing=True,
+        )
+
+        if tick_increment.lower() in ["y", "yes"]:
+            self.cur_world.current_tick += 1
+
+            if self.cur_world.tick_type == "day":
+                timeformat = self.cur_world.tick_type[0].capitalize()
+            else:
+                timeformat = self.cur_world.tick_type[0]
+
+            time_delta = np.timedelta64(self.cur_world.tick_rate, timeformat)
+
+            new_time = self.cur_time + time_delta
+
+            (
+                self.cur_world.current_year,
+                self.cur_world.current_month,
+                self.cur_world.current_day,
+                self.cur_world.current_hour,
+                self.cur_world.current_minute,
+                self.cur_world.current_second,
+                self.cur_world.current_era,
+            ) = from_datetime(new_time)
 
     def init_game(self):
         new_or_load = prompt(
@@ -123,6 +183,10 @@ class Game:
         # Load Game
         elif new_or_load.lower() in ["l", "load"]:
             self.load_game()
+
+        self.existing_worlds = [
+            x.name for x in Path(self.game_path / "worlds").iterdir() if x.is_dir()
+        ]
 
         return
 
@@ -147,9 +211,6 @@ class Game:
             validator=validators.NotInListValidator(self.existing_games),
         )
         self.game_path = GAMES_PATH / self.game_name
-        self.existing_worlds = [
-            x.name for x in Path(self.game_path / "worlds").iterdir() if x.is_dir()
-        ]
 
         print(f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}")
 
@@ -252,7 +313,7 @@ class Game:
         )
 
         self.cur_world.tick_type = prompt(
-            "Input tick type (years/months/days/hours/minutes/seconds): ",
+            "Input tick type (days/hours/minutes/seconds): ",
             validator=validators.is_tick_type,
             validate_while_typing=True,
         )
