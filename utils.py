@@ -6,6 +6,8 @@ import yaml
 import openai
 import itertools
 import numpy as np
+from dataclasses import fields
+import typing
 
 
 class bcolors:
@@ -25,7 +27,7 @@ class Input(StrEnum):
     init_world = "init_world"
     init_npcs = "init_npcs"
 
-    tick_increment = "tick_increment"
+    progress_world = "progress_world"
 
     info_game = "info_game"
     info_world = "info_world"
@@ -42,6 +44,15 @@ def get_last_modified_file(path):
     else:
         last_modified_file = None
     return last_modified_file
+
+
+def get_oldest_modified_file(path):
+    files = [f for f in Path(path).iterdir() if f.is_file()]
+    if files:
+        oldest_modified_file = min(files, key=lambda p: p.stat().st_mtime)
+    else:
+        oldest_modified_file = None
+    return oldest_modified_file
 
 
 def int_to_month(month: int):
@@ -106,10 +117,18 @@ def code_block_to_var(code_block: str):
     return var
 
 
-def save_yaml_from_dataclass(save_path: Path, data: YamlDataClassConfig):
+def save_yaml_from_data(save_path: Path, data: YamlDataClassConfig | typing.Any):
     yaml.emitter.Emitter.process_tag = lambda self, *args, **kw: None
     with open(save_path, "w") as savefile:
-        yaml.dump(data, savefile)
+        yaml.dump(data, savefile, sort_keys=False)
+
+
+def yaml_from_str(data_str: str):
+    # yaml.emitter.Emitter.process_tag = lambda self, *args, **kw: None
+    if data_str.startswith("```yaml"):
+        split_lines = data_str.split("\n")[1:-1]
+        data_str = "\n".join(split_lines)
+    return yaml.safe_load(data_str)
 
 
 def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path):
@@ -154,7 +173,7 @@ def request_openai(
 
     if not processed_response:
         print(
-            f"{bcolors.FAIL}OpenAI request failed, check your prompt or increase the number of request tries{bcolors.ENDC}"
+            f"{bcolors.FAIL}OpenAI request failed, check your key and prompt or increase the number of request tries{bcolors.ENDC}"
         )
         return None
 
@@ -312,13 +331,109 @@ def from_datetime(datetime: np.datetime64):
     return int(year), int(month), int(day), int(hour), int(minute), int(second), era
 
 
+def dataclass_to_dict(dataclass):
+    return dataclass.__dict__
+
+
+def populate_yaml_with_dicts(yaml_path: Path, dicts_to_add: list[dict]):
+    """Load and populate a yaml file with dicts. `dicts_to_add` should be in the same order as empty dicts in the yaml file.
+
+    Args:
+        yaml_path (Path): Path to yaml file
+        dicts_to_add (list[dict]): List of dicts to add to yaml data
+    """
+    with open(yaml_path) as f:
+        yaml_data = yaml.safe_load(f)
+
+    yaml_dicts = [
+        yaml_data[dict_name]
+        for dict_name in yaml_data.keys()
+        if isinstance(yaml_data[dict_name], dict)
+    ]
+
+    for yaml_dict, dict_to_add in zip(yaml_dicts, dicts_to_add):
+        if yaml_dict:
+            continue
+
+        for attribute in dict_to_add:
+            yaml_dict[attribute] = None
+
+    return yaml_data
+
+
+def get_dataclass_dict_names(dataclass):
+    """From the dataclass get only the names of fields of type dict
+
+
+    Args:
+        dataclass (_type_): dataclass to get dicts from
+    """
+    return [
+        field.name
+        for field in fields(dataclass)
+        if typing.get_origin(field.type) in [dict, typing.Dict]
+    ]
+
+
+def populate_dataclass_with_dicts(dataclass, dicts_to_add: list[list]):
+    """Load and populate a dataclass with dicts. `dicts_to_add` should be in the same order as empty dicts of dataclass.
+
+    Args:
+        dataclass: dataclass to populate
+        dicts_to_add (list[dict]): List of dicts to add to yaml data
+    """
+    dataclass_dict_names = get_dataclass_dict_names(dataclass)
+
+    for dataclass_dict_name, dict_to_add in zip(dataclass_dict_names, dicts_to_add):
+        if len(dicts_to_add) == 1:
+            new_values = {dict_name: None for dict_name in dict_to_add}
+        else:
+            new_values = [{dict_name: None} for dict_name in dict_to_add]
+        setattr(
+            dataclass,
+            dataclass_dict_name,
+            new_values,
+        )
+
+    return
+
+
+class YamlDumperDoubleQuotes(yaml.Dumper):
+    def represent_scalar(self, tag, value, style=None):
+        if value == "":
+            style = '"'
+        return super().represent_scalar(tag, value, style)
+
+
 if __name__ == "__main__":
-    dt = to_datetime(month=1, day=1, year=20000, era="AD")
+    from classes import World, Npc, Settings
 
-    print(dt)
-    delta = np.timedelta64(365, "D")
+    settings = Settings()
+    settings.load(path="./settings.yaml")
 
-    t = dt + delta + delta
-    print(t)
-    year, month, day, hour, minute, second, era = from_datetime(t)
-    print(year, month, day, hour, minute, second, era)
+    w = World()
+    # w.attributes["temperature"] = 32
+    # w.name = "Test"
+    # print(fields(w))
+    print(w)
+    populate_dataclass_with_dicts(
+        w, [settings.world_attributes_names, settings.world_time_names]
+    )
+    print(w)
+
+    # print(t)
+    s = """```yaml
+name: 'Mircea Popescu'
+global_goal: 'To become the village's best storyteller'
+attributes:
+  happiness: 5
+  health: 8
+  hunger: 3
+  love: 2
+  rested: 7
+  stress: 2
+  wealth: 4
+current_state_prompt: 'Mircea is currently sitting outside of his house, enjoying the warm weather and watching the river flow by. He is lost in thought, composing a new story to tell his fellow villagers tonight at the market square.' 
+```"""
+    t = yaml_from_str(s)
+    print(t["name"])

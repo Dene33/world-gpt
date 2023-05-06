@@ -1,85 +1,97 @@
 from string import Template
-
-create_world = Template(
-    """Here is the world: $world_state_prompt
-
-Temperature outside is $temperature
-Current date is $day $month $year $era
-Current time is $hour:$minute:$second $pm_am, $daytime"""
+from langchain import PromptTemplate
+from langchain.prompts import load_prompt
+from utils import (
+    request_openai,
+    yaml_from_str,
+    save_yaml_from_data,
+    populate_dataclass_with_dicts,
 )
+import openai
+from prompt_toolkit import prompt
+import yaml
 
-create_npc = Template(
-    """Here is the world: $world_prompt
 
-Temperature outside is $temperature
-Current date is $day $month $year $era
-Current time is $hour:$minute:$second $pm_am, $daytime
-
-Create an NPC for this world. Parse it to a Dict of the structure described below.  \
-Replace zeros and empty values with NPC's parameters. Each parameter can't be less than 0 and more than 10. \
-Output the constructed Dict, without describing it. Do not output anything else.
-
-```python
-npc = $npc_yaml_template
-```
-
-NPCs are usually awake during the day. And they usually sleep at night. Take this into account in `current_state_prompt`.
-
-The global_goal for this NPC is `$global_goal`
+new_world_state_request = Template(
+    """$tick_rate ${tick_type}s have passed. Describe only the new world state and the world's temperature. \
+If something's changed in the world or there was some event(s), please describe them. Output it as a python string \
+assigned to `world_state` var in the code block and int `temperature` var in the same code block. No matter what \
+- DON'T output any comments, NPC's changes, notes and additional descriptions.
 """
 )
 
-create_global_goals = Template(
-    """Here is the world: $world_prompt
-
-NPCs have the following attributes: happiness, love, health, rested, wealth, hunger, stress
-
-Create $num_global_goals random `global_goals` that some NPC will try to achieve in this world. \
-Output it as a python list assigned to `global_goals` var in the code block, don't output anything else. Be creative and remember that \
-some NPCs just want to live their lives without achieving something professionally.  \
-NPC can be not only male but also female, so generate global goals taking into account both sexes."""
+new_npc_state_request = Template(
+    """Here is the NPC:
+$npc_prompt
+Describe ${npc_name}'s state. \
+Output it as a python string assigned to `current_state_prompt` var in the code block.
+In the same code block, output the NPC's change attributes (delta) as a python list assigned to `attributes` var. \
+If the attribute is not changed, output 0 for it. \
+If the attribute is increased, output a positive number for it. \
+If the attribute is decreased, output a negative number for it. \
+NPCs can interact with each other and with the world. NPCs are usually awake during the day. \
+And they usually sleep at night. Take this into account in `current_state_prompt` \
+No matter what - DON'T output any comments, NPC's changes, notes, additional descriptions and explanations.
+"""
 )
 
-if __name__ == "__main__":
-    world_prompt = "A mid-sized village situated by the river in medieval Moldova. \
-It has a self-sufficient community surrounded by a wooden palisade. There is a market square, \
-a church, and fields for growing crops and grazing livestock. The villagers are engaged in crafts, \
-and in times of war or danger, they rely on a small militia from nearby castle."
-    temperature = -5
-    day = 2
-    month = "February"
-    year = 1000
-    era = "AD"
-    hour = 12
-    minute = 1
-    second = 0
-    pm_am = "PM"
-    daytime = "noon"
-    num_npcs = 3
-    npc_yaml_template = """name: ''
-global_goal: ''
-happiness: 0
-love: 0
-health: 0
-rested: 0
-wealth: 0
-hunger: 0
-stress: 0
-current_state_prompt: ''"""
+# World
+world_init_state = load_prompt("data/prompts/world/init_state.yaml")
+world_current_state = load_prompt("data/prompts/world/current_state.yaml")
+world_previous_state = load_prompt("data/prompts/world/previous_state.yaml")
+world_parameters = load_prompt("data/prompts/world/parameters.yaml")
+world_new_state_request = load_prompt("data/prompts/world/new_state_request.yaml")
+create_global_goals = load_prompt("data/prompts/npc/create_global_goals.yaml")
 
-    npcs_prompt = CREATE_NPCS_PROMPT.substitute(
-        world_prompt=world_prompt,
-        temperature=temperature,
-        day=day,
-        month=month,
-        year=year,
-        era=era,
-        hour=hour,
-        minute=minute,
-        second=second,
-        pm_am=pm_am,
-        daytime=daytime,
-        num_npcs=num_npcs,
-        npc_yaml_template=npc_yaml_template,
+# NPC
+create_npc_request = load_prompt("data/prompts/npc/create_npc_request.yaml")
+
+
+if __name__ == "__main__":
+    from classes import World, Npc, Settings
+
+    openai.api_key = prompt("Provide OpenAI API key: ", is_password=True)
+
+    settings = Settings()
+    settings.load(path="./settings.yaml")
+    from utils import (
+        load_yaml_to_dataclass,
+        hour_to_pm_am,
+        hour_to_daytime,
+        dataclass_to_dict,
+        int_to_month,
+        hour_to_iso,
+        minute_to_iso,
+        second_to_iso,
+        YamlDumperDoubleQuotes,
     )
-    print(npcs_prompt)
+    from resources_paths import *
+
+    world = World()
+    load_yaml_to_dataclass(
+        world,
+        "/mnt/Shared/Demania/repos/world-gpt/data/games/Test Game/worlds/Test_World/world_tick_0.yaml",
+    )
+
+    npc_0 = Npc()
+    npc_1 = Npc()
+
+    npcs = [npc_0, npc_1]
+
+    with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
+        npc_yaml_template = yaml.safe_load(f)
+
+    for attribute in settings.npc_attributes_names:
+        npc_yaml_template["attributes"][attribute] = 0
+
+    populate_dataclass_with_dicts(npc_0, [settings.npc_attributes_names])
+
+    create_npc_request = create_npc_request.format(
+        world_general_description=world.current_state_prompt,
+        world_current_attributes=world.attributes,
+        npc_yaml_template=yaml.dump(
+            npc_0, sort_keys=False, Dumper=YamlDumperDoubleQuotes
+        ),
+        global_goal="Learn the art of magic and become the village's resident wizard.",
+    )
+    print(create_npc_request)

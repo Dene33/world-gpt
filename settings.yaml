@@ -2,5 +2,8 @@ LLM_model: 'gpt-3.5-turbo'
 API_key: ''
 llm_request_tries_num: 5 # number of tries to get a response from LLM. -1 means infinite
 npc_history_steps: 0 # number of previous npc states to store
+npc_attributes_names: ['happiness', 'health', 'hunger', 'love', 'rested', 'stress', 'wealth'] # list of NPC attributes that will be used in the game
+npc_num_global_goals: 25 # number of NPC global goals to generate, each NPC will choose one from that list
+world_attributes_names: ['temperature', 'number_of_npcs']
+world_time_names: ['day', 'month', 'year', 'era', 'hour', 'minute', 'second', 'pm_am', 'daytime']
 world_history_steps: 0 # number of previous world states to store
-num_global_goals: 25 # number of NPC global goals to generate, each NPC will choose one from that list
