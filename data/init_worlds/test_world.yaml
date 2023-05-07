@@ -1,7 +1,6 @@
 name: "Test_World"  # name of the world
 attributes:
   temperature: 20.0
-  number_of_npcs: 5
 time:
   current_day: 1
   current_month: 9

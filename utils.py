@@ -46,6 +46,17 @@ def get_last_modified_file(path):
     return last_modified_file
 
 
+def get_previous_to_last_modified_file(path):
+    files = [f for f in Path(path).iterdir() if f.is_file()]
+    if len(files) > 1:
+        last_modified_file = max(files, key=lambda p: p.stat().st_mtime)
+        files.remove(last_modified_file)
+        previous_to_last_modified_file = max(files, key=lambda p: p.stat().st_mtime)
+    else:
+        previous_to_last_modified_file = None
+    return previous_to_last_modified_file
+
+
 def get_oldest_modified_file(path):
     files = [f for f in Path(path).iterdir() if f.is_file()]
     if files:
@@ -129,6 +140,12 @@ def yaml_from_str(data_str: str):
         split_lines = data_str.split("\n")[1:-1]
         data_str = "\n".join(split_lines)
     return yaml.safe_load(data_str)
+
+
+def load_yaml(yaml_path: Path):
+    with open(yaml_path) as f:
+        yaml_data = yaml.safe_load(f)
+    return yaml_data
 
 
 def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path):
@@ -331,8 +348,14 @@ def from_datetime(datetime: np.datetime64):
     return int(year), int(month), int(day), int(hour), int(minute), int(second), era
 
 
-def dataclass_to_dict(dataclass):
-    return dataclass.__dict__
+def dataclass_to_dict_copy(dataclass, keys_to_delete: list[str] = []):
+    dataclass_dict_copy = dataclass.__dict__.copy()
+
+    if keys_to_delete:
+        for key in keys_to_delete:
+            del dataclass_dict_copy[key]
+
+    return dataclass_dict_copy
 
 
 def populate_yaml_with_dicts(yaml_path: Path, dicts_to_add: list[dict]):

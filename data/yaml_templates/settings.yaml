@@ -17,6 +17,8 @@ init_prompt: >
 npc_history_steps: 0 # number of previous npc states to store
 npc_attributes_names: [] # list of NPC attributes that will be used in the game
 npc_num_global_goals: 25 # number of NPC global goals to generate, each NPC will choose one from that list
+max_npc_social_connections: 10 # maximum number of social connections for each NPC
+number_of_npcs: 20 # number of NPCs to generate
 world_attributes_names: [] # list of world attributes that will be used in the game
 world_time_names: [] # list of world time names for describing the world's time
 world_history_steps: 0 # number of previous world states to store

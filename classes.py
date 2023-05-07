@@ -7,10 +7,7 @@ from utils import (
     get_oldest_modified_file,
     bcolors,
     int_to_month,
-    hour_to_pm_am,
-    hour_to_daytime,
     Input,
-    code_block_to_var,
     save_yaml_from_data,
     request_openai,
     load_yaml_to_dataclass,
@@ -22,10 +19,18 @@ from utils import (
     populate_dataclass_with_dicts,
     yaml_from_str,
     YamlDumperDoubleQuotes,
+    dataclass_to_dict_copy,
+    load_yaml,
+    get_previous_to_last_modified_file,
 )
 import validators
 from prompt_toolkit import prompt
-from prompts import create_npc_request, create_global_goals
+from prompts import (
+    create_npc_request,
+    create_global_goals,
+    create_social_connections,
+    world_new_state,
+)
 from typing import List, Union, Any
 import yaml
 import openai
@@ -42,6 +47,8 @@ class Settings(YamlDataClassConfig):
     npc_history_steps: int = 0
     npc_attributes_names: list[str] = field(default_factory=list)
     npc_num_global_goals: int = 0
+    max_npc_social_connections: int = 0
+    number_of_npcs: int = 0
     world_attributes_names: list[str] = field(default_factory=list)
     world_time_names: list[str] = field(default_factory=list)
     world_history_steps: int = 0
@@ -63,6 +70,7 @@ class Npc(YamlDataClassConfig):
     name: str = ""
     global_goal: str = ""
     attributes: dict[str, Any] = field(default_factory=dict)
+    social_connections: list[str] = field(default_factory=list)
     current_state_prompt: str = ""
 
 
@@ -147,9 +155,35 @@ class Game:
 
     def progress_world(self):
         self.tick_increment()
-
+        self.update_world()
         self.save_world()
         self.save_npcs()
+
+    def update_world(self):
+        world_new_state_request = world_new_state.format(
+            init_state=self.world_general_description,
+            previous_state=get_previous_to_last_modified_file(self.cur_world_path),
+            current_state=self.cur_world.current_state_prompt,
+            attributes=self.cur_world.attributes,
+            date=self.current_date_to_str(),
+            tick_rate=self.cur_world.tick_rate,
+            tick_type=self.cur_world.tick_type,
+        )
+
+        print(world_new_state_request)
+
+        new_world_state = request_openai(
+            model=self.settings.LLM_model,
+            prompt=world_new_state_request,
+            tries_num=self.settings.llm_request_tries_num,
+            response_processor=yaml_from_str,
+            verbose=True,
+        )
+
+        self.cur_world.current_state_prompt = new_world_state["world_new_state"]
+        self.cur_world.attributes = new_world_state["attributes"].copy()
+
+        return
 
     def tick_increment(self):
         self.cur_time = to_datetime(
@@ -261,6 +295,7 @@ class Game:
             self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
             self.new_global_goals()
             self.new_npcs()
+            self.new_npcs_social_connections()
 
         # Load World
         elif new_or_load.lower() in ["l", "load"]:
@@ -290,7 +325,9 @@ class Game:
         return
 
     def new_world_from_template(self):
-        self.is_in_existing_items(self.existing_init_worlds, "world", Input.init_world)
+        if not self.is_in_existing_items(self.existing_init_worlds, "world"):
+            self.input_handler(Input.init_world)
+            return
 
         world_template_name = prompt(
             f"Choose the world template to load: {', '.join(self.existing_init_worlds)} ",
@@ -335,7 +372,7 @@ class Game:
             )
         )
 
-        self.cur_world.attributes["number_of_npcs"] = int(
+        self.settings.number_of_npcs = int(
             prompt(
                 "Input the number of npcs you want to create: ",
                 validator=validators.is_number,
@@ -432,7 +469,9 @@ class Game:
         return
 
     def load_world(self):
-        self.is_in_existing_items(self.existing_worlds, "world", Input.init_world)
+        if not self.is_in_existing_items(self.existing_worlds, "world"):
+            self.input_handler(Input.init_world)
+            return
 
         world_name_to_load = prompt(
             f"Choose the world to load: {', '.join(self.existing_worlds)} ",
@@ -457,9 +496,9 @@ class Game:
         if not self.cur_npcs_path.exists():
             self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
 
-        for npc_num in range(self.cur_world.attributes["number_of_npcs"]):
+        for npc_num in range(self.settings.number_of_npcs):
             print(
-                f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.cur_world.attributes['number_of_npcs']}...{bcolors.ENDC}"
+                f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.settings.number_of_npcs}...{bcolors.ENDC}"
             )
             new_npc = Npc()
             self.npcs.append(new_npc)
@@ -552,6 +591,48 @@ class Game:
 
         return
 
+    def new_npcs_social_connections(self):
+        print(
+            f"{bcolors.OKCYAN}Generating social connections between NPCs...{bcolors.ENDC}"
+        )
+        keys_to_delete = [
+            key
+            for key in self.npcs[0].__dict__.keys()
+            if key not in ["name", "global_goal", "current_state_prompt"]
+        ]
+        for current_npc in self.npcs:
+            other_npcs = []
+            for other_npc in self.npcs:
+                if current_npc.name == other_npc.name:
+                    continue
+                npc_dict = dataclass_to_dict_copy(other_npc, keys_to_delete)
+                other_npcs.append([npc_dict])
+
+            create_social_connections_prompt = create_social_connections.format(
+                world_general_description=self.cur_world.current_state_prompt,
+                current_npc_name=current_npc.name,
+                current_npc_state=current_npc.current_state_prompt,
+                max_npc_social_connections=self.settings.max_npc_social_connections,
+                npc_social_connection_yaml_template=load_yaml(
+                    YAML_TEMPLATES_PATH / "npc_social_connections.yaml"
+                ),
+                other_npcs=[
+                    yaml.dump(npc, sort_keys=False, Dumper=YamlDumperDoubleQuotes)
+                    for npc in other_npcs
+                ],
+            )
+
+            npc_social_connections = request_openai(
+                model=self.settings.LLM_model,
+                prompt=create_social_connections_prompt,
+                tries_num=self.settings.llm_request_tries_num,
+                response_processor=yaml_from_str,
+                verbose=True,
+            )
+
+            current_npc.social_connections = npc_social_connections
+            self.save_npc(current_npc)
+
     def save_world(self):
         self.cur_world_path.mkdir(parents=True, exist_ok=True)
         save_path = (
@@ -588,17 +669,18 @@ class Game:
 
         return
 
-    def is_in_existing_items(
-        self, existing_items: List | None, item_name: str, input_type: Input
-    ):
+    def is_in_existing_items(self, existing_items: List | None, item_name: str):
+        in_existing_items = False
         if not existing_items:
             print(
                 f"{bcolors.FAIL}No existing {item_name}s found. Create a new {item_name}.{bcolors.ENDC}"
             )
 
-            self.input_handler(input_type)
+            in_existing_items = False
+        else:
+            in_existing_items = True
 
-        return
+        return in_existing_items
 
     def print_info_world(self):
         self.print_current_time()
@@ -638,13 +720,26 @@ class Game:
 
         return
 
+    def current_time_to_str(self):
+        current_time = (
+            f"{hour_to_iso(self.cur_world.time['current_hour'])}:{minute_to_iso(self.cur_world.time['current_minute'])}:"
+            f"{second_to_iso(self.cur_world.time['current_second'])}"
+        )
+
+        return current_time
+
+    def current_date_to_str(self):
+        current_date = (
+            f"{self.cur_world.time['current_day']} {int_to_month(self.cur_world.time['current_month'])},"
+            f"{self.cur_world.time['current_year']} {self.cur_world.time['current_era']}. "
+        )
+
+        return current_date
+
     def print_current_time(self):
         current_time = (
             f"{bcolors.OKBLUE}"
-            f"Current time:{bcolors.ENDC} {self.cur_world.time['current_day']} {int_to_month(self.cur_world.time['current_month'])},"
-            f"{self.cur_world.time['current_year']} {self.cur_world.time['current_era']}. "
-            f"{hour_to_iso(self.cur_world.time['current_hour'])}:{minute_to_iso(self.cur_world.time['current_minute'])}:"
-            f"{second_to_iso(self.cur_world.time['current_second'])}"
+            f"Current time:{bcolors.ENDC} {self.current_time_to_str()}, {self.current_date_to_str()}"
         )
 
         print(current_time)
