@@ -159,12 +159,13 @@ if __name__ == "__main__":
         current_state=world.current_state_prompt,
         attributes=world.attributes,
         date=world.time,
-        time=world.time,
         tick_rate=world.tick_rate,
         tick_type=world.tick_type,
     )
 
     # print(world_new_state_request)
+
+    npc_0.social_connections = ["Radu Carp"]
 
     npc_new_state_request = npc_new_state.format(
         world_general_description=world.current_state_prompt,

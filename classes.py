@@ -30,6 +30,7 @@ from prompts import (
     create_global_goals,
     create_social_connections,
     world_new_state,
+    npc_new_state,
 )
 from typing import List, Union, Any
 import yaml
@@ -46,6 +47,7 @@ class Settings(YamlDataClassConfig):
     llm_request_tries_num: int = -1
     npc_history_steps: int = 0
     npc_attributes_names: list[str] = field(default_factory=list)
+    max_attribute_delta: int = 0
     npc_num_global_goals: int = 0
     max_npc_social_connections: int = 0
     number_of_npcs: int = 0
@@ -156,6 +158,8 @@ class Game:
     def progress_world(self):
         self.tick_increment()
         self.update_world()
+        self.update_npcs()
+
         self.save_world()
         self.save_npcs()
 
@@ -181,7 +185,60 @@ class Game:
         )
 
         self.cur_world.current_state_prompt = new_world_state["world_new_state"]
-        self.cur_world.attributes = new_world_state["attributes"].copy()
+
+        for attribute_key in self.cur_world.attributes.keys():
+            new_attribute_value = new_world_state["attributes"].get(attribute_key, None)
+            if new_attribute_value:
+                self.cur_world.attributes[attribute_key] = new_attribute_value
+
+        return
+
+    def update_npcs(self):
+        for npc in self.npcs:
+            self.update_npc(npc)
+
+        return
+
+    def update_npc(self, current_npc: Npc):
+        keys_to_delete = [
+            key
+            for key in self.npcs[0].__dict__.keys()
+            if key not in ["name", "current_state_prompt"]
+        ]
+        other_npcs = [
+            dataclass_to_dict_copy(npc, keys_to_delete)
+            for npc in self.npcs
+            if npc.name != current_npc.name
+        ]
+
+        npc_new_state_request = npc_new_state.format(
+            world_general_description=self.world_general_description,
+            world_current_state=self.cur_world.current_state_prompt,
+            world_attributes=self.cur_world.attributes,
+            date=self.current_date_to_str(),
+            current_npc=yaml.dump(
+                current_npc, sort_keys=False, Dumper=YamlDumperDoubleQuotes
+            ),
+            other_npcs=other_npcs,
+            tick_rate=self.cur_world.tick_rate,
+            tick_type=self.cur_world.tick_type,
+            max_attribute_delta=self.settings.max_attribute_delta,
+        )
+
+        npc_new_data = request_openai(
+            model=self.settings.LLM_model,
+            prompt=npc_new_state_request,
+            tries_num=self.settings.llm_request_tries_num,
+            response_processor=yaml_from_str,
+            verbose=True,
+        )
+
+        current_npc.current_state_prompt = npc_new_data["npc_new_state"]
+
+        for attribute_key in current_npc.attributes.keys():
+            new_attribute_value = npc_new_data["attributes"].get(attribute_key, 0)
+            current_npc.attributes[attribute_key] += new_attribute_value
+        # current_npc.attributes = npc_new_data["attributes"].copy()
 
         return
 
