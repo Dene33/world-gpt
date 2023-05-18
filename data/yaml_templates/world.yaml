@@ -1,7 +1,7 @@
 name: ""  # name of the world
 attributes: {}
 time: {}
-tick_type: ""  # years, months, days, hours, minutes, seconds, etc
+tick_type: ""  # years, days, hours, minutes, seconds, etc
 tick_rate: 0  # how much time of tick_type passes in the world per tick
 current_tick: 0  # indicates how many ticks passed
 current_state_prompt: ""

@@ -1,0 +1,48 @@
+/* Get a fancy font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap');
+
+body {
+  background-color: black;
+  color: white; /* text color */
+}
+
+/* Change header text to imported font */
+h1 {
+  /* font-family: 'Architects Daughter'; */
+  text-align: center;
+  padding-top: 120px;
+  padding-bottom: 60px;
+}
+
+/* Make text visible on inputs */
+.shiny-input-container {
+  color: #474747;
+}
+
+.text-panel {
+  text-align: left;
+  background-color: rgba(73, 73, 73, 0.26);
+  padding: 30px;
+  color: white;
+  border: 0;
+}
+
+.main-page-container {
+  padding-left: 15%;
+  padding-right: 15%;
+}
+
+.main-page-button {
+  margin-top: 40px;
+  padding: 10px;
+  max-width: 110px; /* Set your desired maximum width */
+  word-wrap: break-word; /* Allow text to wrap within the button */
+}
+
+.main-page-load-world {
+  float: right;
+}
+
+label {
+  color: white;
+}

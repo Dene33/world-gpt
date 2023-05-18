@@ -1,4 +1,5 @@
-from enum import Enum, StrEnum
+from enum import auto
+from strenum import StrEnum
 from pathlib import Path
 import ast
 from yamldataclassconfig.config import YamlDataClassConfig
@@ -157,7 +158,7 @@ def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path)
     return
 
 
-def request_openai(
+async def request_openai(
     model: str, prompt: str, tries_num: int = -1, response_processor=None, verbose=False
 ):
     processed_response = None
@@ -170,7 +171,7 @@ def request_openai(
     for i in tries_range:
         try:
             print(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
-            response = openai.ChatCompletion.create(
+            response = await openai.ChatCompletion.acreate(
                 model=model, messages=[{"role": "user", "content": prompt}]
             )
 
@@ -408,10 +409,10 @@ def populate_dataclass_with_dicts(dataclass, dicts_to_add: list[list]):
     dataclass_dict_names = get_dataclass_dict_names(dataclass)
 
     for dataclass_dict_name, dict_to_add in zip(dataclass_dict_names, dicts_to_add):
-        if len(dicts_to_add) == 1:
-            new_values = {dict_name: None for dict_name in dict_to_add}
-        else:
-            new_values = [{dict_name: None} for dict_name in dict_to_add]
+        # if len(dicts_to_add) == 1:
+        new_values = {dict_name: None for dict_name in dict_to_add}
+        # else:
+        #     new_values = [{dict_name: None} for dict_name in dict_to_add]
         setattr(
             dataclass,
             dataclass_dict_name,
@@ -442,21 +443,22 @@ if __name__ == "__main__":
     populate_dataclass_with_dicts(
         w, [settings.world_attributes_names, settings.world_time_names]
     )
+    save_yaml_from_data("./test.yaml", w)
     print(w)
 
-    # print(t)
-    s = """```yaml
-name: 'Mircea Popescu'
-global_goal: 'To become the village's best storyteller'
-attributes:
-  happiness: 5
-  health: 8
-  hunger: 3
-  love: 2
-  rested: 7
-  stress: 2
-  wealth: 4
-current_state_prompt: 'Mircea is currently sitting outside of his house, enjoying the warm weather and watching the river flow by. He is lost in thought, composing a new story to tell his fellow villagers tonight at the market square.' 
-```"""
-    t = yaml_from_str(s)
-    print(t["name"])
+#     # print(t)
+#     s = """```yaml
+# name: 'Mircea Popescu'
+# global_goal: 'To become the village's best storyteller'
+# attributes:
+#   happiness: 5
+#   health: 8
+#   hunger: 3
+#   love: 2
+#   rested: 7
+#   stress: 2
+#   wealth: 4
+# current_state_prompt: 'Mircea is currently sitting outside of his house, enjoying the warm weather and watching the river flow by. He is lost in thought, composing a new story to tell his fellow villagers tonight at the market square.'
+# ```"""
+#     t = yaml_from_str(s)
+#     print(t["name"])

@@ -82,8 +82,9 @@ class Game:
         self.settings: Settings = Settings()
         self.settings.load(path="./settings.yaml")
         openai.api_key = self.settings.API_key
-        if not openai.api_key:
-            openai.api_key = prompt("Provide OpenAI API key: ", is_password=True)
+        openai.api_key = ""
+        # if not openai.api_key:
+        #     openai.api_key = prompt("Provide OpenAI API key: ", is_password=True)
 
         # Paths
         self.game_path: Path = ""
@@ -303,11 +304,14 @@ class Game:
 
         return
 
-    def new_game(self):
-        self.game_name = prompt(
-            f"Input the new game name: ",
-            validator=validators.IsInListValidator(self.existing_games),
-        )
+    def new_game(self, game_name: str = None):
+        if not game_name:
+            self.game_name = prompt(
+                f"Input the new game name: ",
+                validator=validators.IsInListValidator(self.existing_games),
+            )
+        else:
+            self.game_name = game_name
 
         self.game_path = GAMES_PATH / self.game_name
         Path(self.game_path / "worlds").mkdir(parents=True, exist_ok=True)
@@ -335,49 +339,103 @@ class Game:
 
         return
 
-    def init_world(self):
-        new_or_load = prompt(
-            f"(L)oad existing world or create a (n)ew one? (l/n)",
-            validator=validators.NotInListValidator(
-                ["N", "n", "new", "L", "l", "load"]
-            ),
-            validate_while_typing=True,
-        )
+    async def init_world(self, world_data: dict = None):
+        if world_data:
+            new_or_load = "n"
+        else:
+            new_or_load = prompt(
+                f"(L)oad existing world or create a (n)ew one? (l/n)",
+                validator=validators.NotInListValidator(
+                    ["N", "n", "new", "L", "l", "load"]
+                ),
+                validate_while_typing=True,
+            )
 
         # New World
         if new_or_load.lower() in ["n", "new"]:
-            self.new_world()
+            self.new_world(world_data)
 
             self.cur_npcs_path: Path = self.cur_world_path / "npcs"
             self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
-            self.new_global_goals()
-            self.new_npcs()
-            self.new_npcs_social_connections()
+            await self.new_global_goals()
+            # self.new_npcs()
+            # self.new_npcs_social_connections()
 
         # Load World
         elif new_or_load.lower() in ["l", "load"]:
             self.load_world()
             self.load_npcs()
 
-        return
+        return self
 
-    def new_world(self):
-        template_or_input = prompt(
-            f"Create a new world from the predefined (t)emplate or (i)nput world settings manually? (t/i)",
-            validator=validators.NotInListValidator(["t", "template", "i", "input"]),
-            validate_while_typing=True,
-        )
-
+    def new_world(self, world_data: dict = None):
         # Add the world attributes and time attributes to the current world from the settings
         populate_dataclass_with_dicts(
             self.cur_world,
             [self.settings.world_attributes_names, self.settings.world_time_names],
         )
 
-        if template_or_input.lower() in ["t", "template"]:
-            self.new_world_from_template()
-        elif template_or_input.lower() in ["i", "input"]:
-            self.new_world_from_input()
+        if world_data:
+            self.new_world_from_ui(world_data)
+        else:
+            template_or_input = prompt(
+                f"Create a new world from the predefined (t)emplate or (i)nput world settings manually? (t/i)",
+                validator=validators.NotInListValidator(
+                    ["t", "template", "i", "input"]
+                ),
+                validate_while_typing=True,
+            )
+
+            if template_or_input.lower() in ["t", "template"]:
+                self.new_world_from_template()
+            elif template_or_input.lower() in ["i", "input"]:
+                self.new_world_from_input()
+
+        return
+
+    def new_world_from_ui(self, world_data: dict):
+        self.cur_world.name = world_data["name"]
+        print(self.cur_world.name)
+        print(type(self.cur_world.name))
+
+        for attribute_key in self.cur_world.attributes.keys():
+            new_attribute_value = world_data["attributes"].get(attribute_key, None)
+            if new_attribute_value:
+                self.cur_world.attributes[attribute_key] = new_attribute_value
+        self.cur_world.time = world_data["time"]
+        self.cur_world.tick_type = world_data["tick_type"]
+        self.cur_world.tick_rate = world_data["tick_rate"]
+        self.cur_world.current_state_prompt = world_data["current_state_prompt"]
+
+        self.cur_world_path = (
+            GAMES_PATH / self.game_name / "worlds" / self.cur_world.name
+        )
+        self.cur_world_path.mkdir(parents=True, exist_ok=True)
+
+        self.world_general_description = self.cur_world.current_state_prompt
+
+        self.save_world()
+
+        print(
+            f"{bcolors.OKGREEN}The world {self.cur_world.name} is created from UI{bcolors.ENDC}"
+        )
+
+        return
+
+    def settings_from_ui(self, settings_data: dict):
+        for key in self.settings.__dict__.keys():
+            new_settings_value = settings_data.get(key, None)
+            if new_settings_value:
+                setattr(self.settings, key, new_settings_value)
+
+        self.save_settings_from_ui()
+        return
+
+    def save_settings_from_ui(self):
+        self.game_path.mkdir(parents=True, exist_ok=True)
+        save_path = self.game_path / f"settings.yaml"
+
+        save_yaml_from_data(save_path, self.settings)
 
         return
 
@@ -609,7 +667,7 @@ class Game:
             load_yaml_to_dataclass(new_npc, last_modified_npc_yaml)
             self.npcs.append(new_npc)
 
-    def new_global_goals(self):
+    async def new_global_goals(self):
         print(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
 
         # Duplicate, refactor later
@@ -635,7 +693,7 @@ class Game:
             ),
         )
 
-        self.global_goals = request_openai(
+        self.global_goals = await request_openai(
             model=self.settings.LLM_model,
             prompt=create_global_goals_prompt,
             tries_num=self.settings.llm_request_tries_num,
