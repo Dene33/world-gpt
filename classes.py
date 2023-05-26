@@ -156,15 +156,15 @@ class Game:
 
         return
 
-    def progress_world(self):
-        self.tick_increment()
-        self.update_world()
-        self.update_npcs()
+    async def progress_world(self):
+        await self.tick_increment()
+        await self.update_world()
+        await self.update_npcs()
 
         self.save_world()
         self.save_npcs()
 
-    def update_world(self):
+    async def update_world(self):
         world_new_state_request = world_new_state.format(
             init_state=self.world_general_description,
             previous_state=get_previous_to_last_modified_file(self.cur_world_path),
@@ -177,7 +177,7 @@ class Game:
 
         print(world_new_state_request)
 
-        new_world_state = request_openai(
+        new_world_state = await request_openai(
             model=self.settings.LLM_model,
             prompt=world_new_state_request,
             tries_num=self.settings.llm_request_tries_num,
@@ -194,13 +194,13 @@ class Game:
 
         return
 
-    def update_npcs(self):
+    async def update_npcs(self):
         for npc in self.npcs:
-            self.update_npc(npc)
+            await self.update_npc(npc)
 
         return
 
-    def update_npc(self, current_npc: Npc):
+    async def update_npc(self, current_npc: Npc):
         keys_to_delete = [
             key
             for key in self.npcs[0].__dict__.keys()
@@ -226,7 +226,7 @@ class Game:
             max_attribute_delta=self.settings.max_attribute_delta,
         )
 
-        npc_new_data = request_openai(
+        npc_new_data = await request_openai(
             model=self.settings.LLM_model,
             prompt=npc_new_state_request,
             tries_num=self.settings.llm_request_tries_num,
@@ -243,7 +243,7 @@ class Game:
 
         return
 
-    def tick_increment(self):
+    async def tick_increment(self):
         self.cur_time = to_datetime(
             self.cur_world.time["current_year"],
             self.cur_world.time["current_month"],
@@ -358,8 +358,8 @@ class Game:
             self.cur_npcs_path: Path = self.cur_world_path / "npcs"
             self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
             await self.new_global_goals()
-            # self.new_npcs()
-            # self.new_npcs_social_connections()
+            await self.new_npcs()
+            await self.new_npcs_social_connections()
 
         # Load World
         elif new_or_load.lower() in ["l", "load"]:
@@ -607,7 +607,7 @@ class Game:
 
         return
 
-    def new_npcs(self):
+    async def new_npcs(self):
         if not self.cur_npcs_path.exists():
             self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
 
@@ -631,7 +631,7 @@ class Game:
 
             print("new_npc_prompt", new_npc_prompt)
 
-            new_npc_data = request_openai(
+            new_npc_data = await request_openai(
                 model=self.settings.LLM_model,
                 prompt=new_npc_prompt,
                 tries_num=self.settings.llm_request_tries_num,
@@ -706,7 +706,7 @@ class Game:
 
         return
 
-    def new_npcs_social_connections(self):
+    async def new_npcs_social_connections(self):
         print(
             f"{bcolors.OKCYAN}Generating social connections between NPCs...{bcolors.ENDC}"
         )
@@ -737,7 +737,7 @@ class Game:
                 ],
             )
 
-            npc_social_connections = request_openai(
+            npc_social_connections = await request_openai(
                 model=self.settings.LLM_model,
                 prompt=create_social_connections_prompt,
                 tries_num=self.settings.llm_request_tries_num,

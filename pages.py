@@ -1,5 +1,6 @@
 from shiny import App, render, ui, reactive
 import shinyswatch
+from classes import Npc
 
 PAGE_HOME = ui.TagList(
     ui.div(
@@ -24,7 +25,7 @@ PAGE_HOME = ui.TagList(
             ui.input_action_button(
                 "load_existing_world",
                 "Load existing world",
-                class_="btn-primary main-page-button main-page-load-world",
+                class_="btn-primary main-page-button main-page-load-world disabled",
             ),
             ui.output_text_verbatim("main"),
             class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
@@ -135,7 +136,7 @@ from nearby castle.",
             ),
         ),
         ui.input_action_button(
-            "to_page_world_interact",
+            "to_page_world_loading",
             "Create new world",
             width="100%",
         ),
@@ -143,14 +144,103 @@ from nearby castle.",
     )
 )
 
-PAGE_WORLD_INTERACT = ui.TagList(
+PAGE_WORLD_LOADING = ui.TagList(
     ui.div(
-        ui.p("Initialized world"),
-        ui.output_text_verbatim("global_goals"),
-        ui.input_action_button(
-            "check_world",
-            "Check world",
-            width="100%",
+        {"id": "loading-world-content"},
+        ui.row(
+            ui.h1(
+                ui.output_text("loading_world_header_text"),
+                class_="loading_world_header",
+            ),
+            ui.img(
+                id="loading_world_image",
+                src="img/loading.svg",
+                class_="loading_world_image",
+            ),
         ),
+        class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
     )
 )
+
+
+PAGE_WORLD_INTERACT = ui.TagList(
+    ui.div(
+        {"id": "interact-world-content"},
+        ui.h1(ui.output_text("world_interact_header")),
+        ui.navset_tab_card(
+            ui.nav(
+                "World",
+                ui.div("World state", ui.output_text_verbatim("world_current_state")),
+                ui.row(
+                    ui.column(6, "Date", ui.output_text_verbatim("world_current_date")),
+                    ui.column(4, "Time", ui.output_text_verbatim("world_current_time")),
+                    ui.column(
+                        2, "C°", ui.output_text_verbatim("world_current_temperature")
+                    ),
+                ),
+            ),
+            ui.nav_menu(
+                "NPCs",
+                ui.nav(
+                    f"NPC placeholder",
+                    "NPC placeholder",
+                    value=f"npc_placeholder",
+                ),
+                value="npcs_nav_menu",
+            ),
+            id="world_interact_tabs",
+        ),
+        ui.input_action_button(
+            "world_progress_button",
+            ui.output_text("world_progress_button_text"),
+            width="100%",
+        ),
+        class_="main-page-container col-lg-9 col-md-12 col-sm-12 col-12 mx-auto",
+    )
+)
+
+
+def generate_npc_tab(npc: Npc):
+    npc_value = npc.name.lower().replace(" ", "_")
+    npc_content = ui.TagList(
+        ui.div(
+            {"id": f"npc-content-{npc_value}"},
+            ui.div(
+                "Name",
+                ui.pre(
+                    npc.name,
+                    class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                ),
+            ),
+            ui.div(
+                "State",
+                ui.pre(
+                    npc.current_state_prompt,
+                    class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                ),
+            ),
+            ui.row(
+                ui.column(
+                    6,
+                    ui.div(
+                        "Goal",
+                        ui.pre(
+                            npc.global_goal,
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                        ),
+                    ),
+                ),
+                ui.column(
+                    6,
+                    ui.div(
+                        "Attributes",
+                        ui.pre(
+                            str(npc.attributes)[1:-1],
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                        ),
+                    ),
+                ),
+            ),
+        )
+    )
+    return npc_value, npc_content
