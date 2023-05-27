@@ -13,11 +13,13 @@ from pages import (
     PAGE_WORLD_CREATE,
     PAGE_WORLD_LOADING,
     PAGE_WORLD_INTERACT,
+    PAGE_WORLD_UPDATING,
     generate_npc_tab,
 )
 from shiny.types import ImgData
 from operator import attrgetter
-
+import random
+from copy import copy, deepcopy
 
 app_ui = ui.page_fluid(
     {"id": "app-content"},
@@ -35,6 +37,7 @@ app_ui = ui.page_fluid(
                 "page_world_create",
                 "page_world_loading",
                 "page_world_interact",
+                "page_world_updating",
             ],
         ),
         ui.navset_hidden(
@@ -45,6 +48,11 @@ app_ui = ui.page_fluid(
                 "Interact with the world",
                 PAGE_WORLD_INTERACT,
                 value="page_world_interact",
+            ),
+            ui.nav(
+                "Updating page",
+                PAGE_WORLD_UPDATING,
+                value="page_world_updating",
             ),
             id="pages",
         ),
