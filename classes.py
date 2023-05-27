@@ -81,8 +81,8 @@ class Game:
         # Settings
         self.settings: Settings = Settings()
         self.settings.load(path="./settings.yaml")
-        openai.api_key = self.settings.API_key
-        openai.api_key = ""
+        # openai.api_key = self.settings.API_key
+        # openai.api_key = ""
         # if not openai.api_key:
         #     openai.api_key = prompt("Provide OpenAI API key: ", is_password=True)
 
@@ -164,6 +164,8 @@ class Game:
         self.save_world()
         self.save_npcs()
 
+        return self
+
     async def update_world(self):
         world_new_state_request = world_new_state.format(
             init_state=self.world_general_description,
@@ -183,6 +185,7 @@ class Game:
             tries_num=self.settings.llm_request_tries_num,
             response_processor=yaml_from_str,
             verbose=True,
+            api_key=self.settings.API_key,
         )
 
         self.cur_world.current_state_prompt = new_world_state["world_new_state"]
@@ -232,6 +235,7 @@ class Game:
             tries_num=self.settings.llm_request_tries_num,
             response_processor=yaml_from_str,
             verbose=True,
+            api_key=self.settings.API_key,
         )
 
         current_npc.current_state_prompt = npc_new_data["npc_new_state"]
@@ -629,14 +633,13 @@ class Game:
                 global_goal=random.choice(self.global_goals),
             )
 
-            print("new_npc_prompt", new_npc_prompt)
-
             new_npc_data = await request_openai(
                 model=self.settings.LLM_model,
                 prompt=new_npc_prompt,
                 tries_num=self.settings.llm_request_tries_num,
                 response_processor=yaml_from_str,
                 verbose=True,
+                api_key=self.settings.API_key,
             )
 
             self.save_npc(new_npc_data)
@@ -699,6 +702,7 @@ class Game:
             tries_num=self.settings.llm_request_tries_num,
             response_processor=yaml_from_str,
             verbose=True,
+            api_key=self.settings.API_key,
         )
 
         self.save_global_goals()
@@ -715,7 +719,12 @@ class Game:
             for key in self.npcs[0].__dict__.keys()
             if key not in ["name", "global_goal", "current_state_prompt"]
         ]
+
         for current_npc in self.npcs:
+            if len(self.npcs) < 2:
+                current_npc.social_connections = []
+                self.save_npc(current_npc)
+                break
             other_npcs = []
             for other_npc in self.npcs:
                 if current_npc.name == other_npc.name:
@@ -743,6 +752,7 @@ class Game:
                 tries_num=self.settings.llm_request_tries_num,
                 response_processor=yaml_from_str,
                 verbose=True,
+                api_key=self.settings.API_key,
             )
 
             current_npc.social_connections = npc_social_connections

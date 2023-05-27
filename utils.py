@@ -159,7 +159,12 @@ def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path)
 
 
 async def request_openai(
-    model: str, prompt: str, tries_num: int = -1, response_processor=None, verbose=False
+    model: str,
+    prompt: str,
+    tries_num: int = -1,
+    response_processor=None,
+    verbose=False,
+    api_key: str = None,
 ):
     processed_response = None
 
@@ -172,7 +177,9 @@ async def request_openai(
         try:
             print(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
             response = await openai.ChatCompletion.acreate(
-                model=model, messages=[{"role": "user", "content": prompt}]
+                api_key=api_key,
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
             )
 
             # get the response
