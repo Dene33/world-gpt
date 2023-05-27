@@ -162,6 +162,23 @@ PAGE_WORLD_LOADING = ui.TagList(
     )
 )
 
+PAGE_WORLD_UPDATING = ui.TagList(
+    ui.div(
+        {"id": "updating-world-content"},
+        ui.row(
+            ui.h1(
+                ui.output_text("updating_world_header_text"),
+                class_="loading_world_header",
+            ),
+            ui.img(
+                id="loading_world_image",
+                src="img/loading.svg",
+                class_="loading_world_image",
+            ),
+        ),
+        class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
+    )
+)
 
 PAGE_WORLD_INTERACT = ui.TagList(
     ui.div(
@@ -191,8 +208,13 @@ PAGE_WORLD_INTERACT = ui.TagList(
             id="world_interact_tabs",
         ),
         ui.input_action_button(
-            "world_progress_button",
+            "to_page_world_updating",
             ui.output_text("world_progress_button_text"),
+            width="100%",
+        ),
+        ui.input_action_button(
+            "change_state",
+            "Change state",
             width="100%",
         ),
         class_="main-page-container col-lg-9 col-md-12 col-sm-12 col-12 mx-auto",
