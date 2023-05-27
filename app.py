@@ -108,7 +108,7 @@ def server(input, output, session):
             "number_of_npcs": int(input.new_world_npc_num()),
         }
 
-        openai.api_key = input.API_key()
+        # openai.api_key = input.API_key()
         game.settings_from_ui(settings_data)
 
         game_task = asyncio.create_task(game.init_world(world_data))
