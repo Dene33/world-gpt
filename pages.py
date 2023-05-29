@@ -1,6 +1,6 @@
 from shiny import App, render, ui, reactive
 import shinyswatch
-from classes import Npc
+from classes import Npc, Game
 
 PAGE_HOME = ui.TagList(
     ui.div(
@@ -168,7 +168,7 @@ PAGE_WORLD_UPDATING = ui.TagList(
         ui.row(
             ui.h1(
                 ui.output_text("updating_world_header_text"),
-                class_="loading_world_header",
+                class_="updating_world_header",
             ),
             ui.img(
                 id="loading_world_image",
@@ -185,17 +185,6 @@ PAGE_WORLD_INTERACT = ui.TagList(
         {"id": "interact-world-content"},
         ui.h1(ui.output_text("world_interact_header")),
         ui.navset_tab_card(
-            ui.nav(
-                "World",
-                ui.div("World state", ui.output_text_verbatim("world_current_state")),
-                ui.row(
-                    ui.column(6, "Date", ui.output_text_verbatim("world_current_date")),
-                    ui.column(4, "Time", ui.output_text_verbatim("world_current_time")),
-                    ui.column(
-                        2, "C°", ui.output_text_verbatim("world_current_temperature")
-                    ),
-                ),
-            ),
             ui.nav_menu(
                 "NPCs",
                 ui.nav(
@@ -212,14 +201,62 @@ PAGE_WORLD_INTERACT = ui.TagList(
             ui.output_text("world_progress_button_text"),
             width="100%",
         ),
-        ui.input_action_button(
-            "change_state",
-            "Change state",
-            width="100%",
-        ),
+        # ui.input_action_button(
+        #     "change_state",
+        #     "Change state",
+        #     width="100%",
+        # ),
         class_="main-page-container col-lg-9 col-md-12 col-sm-12 col-12 mx-auto",
     )
 )
+
+
+def generate_world_tab(game: Game):
+    world_content = ui.TagList(
+        ui.div(
+            "World state",
+            ui.pre(
+                game.cur_world.current_state_prompt,
+                class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+            ),
+        ),
+        ui.row(
+            ui.column(
+                6,
+                ui.div(
+                    "Date",
+                    ui.pre(
+                        game.current_date_to_str(),
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                    ),
+                ),
+            ),
+            ui.column(
+                4,
+                ui.div(
+                    "Time",
+                    ui.pre(
+                        game.current_time_to_str(),
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                    ),
+                ),
+            ),
+            ui.column(
+                2,
+                ui.div(
+                    "C°",
+                    ui.pre(
+                        game.cur_world.attributes["temperature"],
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    world_tab = ui.nav("World", world_content, value="world_nav")
+
+    return world_tab
 
 
 def generate_npc_tab(npc: Npc):
@@ -265,4 +302,6 @@ def generate_npc_tab(npc: Npc):
             ),
         )
     )
-    return npc_value, npc_content
+
+    npc_tab = ui.nav(npc.name, npc_content, value=npc_value)
+    return npc_tab

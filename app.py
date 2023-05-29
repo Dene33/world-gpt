@@ -14,6 +14,7 @@ from pages import (
     PAGE_WORLD_LOADING,
     PAGE_WORLD_INTERACT,
     PAGE_WORLD_UPDATING,
+    generate_world_tab,
     generate_npc_tab,
 )
 from shiny.types import ImgData
@@ -25,7 +26,6 @@ app_ui = ui.page_fluid(
     {"id": "app-content"},
     shinyswatch.theme.sketchy(),
     ui.tags.head(
-        ui.div("Test"),
         ui.tags.link(rel="stylesheet", type="text/css", href="css/style.css"),
     ),
     ui.tags.body(
@@ -61,6 +61,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input, output, session):
+    progress_task_val = reactive.Value(None)
+
     @reactive.Effect
     def _():
         ui.update_navs("pages", selected=str(input.page_select()))
@@ -75,6 +77,16 @@ def server(input, output, session):
     async def _():
         game_task = await generate_world()
         ui.update_navs("pages", selected="page_world_loading")
+
+    @reactive.Effect
+    @reactive.event(input.to_page_world_updating)
+    async def _():
+        print("Update the world")
+        game_task = await generate_world()
+        game = game_task.result()
+        progress_task = progress_task_val.set(await progress_world(game))
+        print("to_page_world_updating", progress_task)
+        ui.update_navs("pages", selected="page_world_updating")
 
     @reactive.Calc
     async def generate_world():
@@ -115,12 +127,51 @@ def server(input, output, session):
 
         return game_task
 
-    @reactive.Calc
-    async def progress_world():
-        game_task = await generate_world()
-        if game_task.done():
-            progress_task = asyncio.create_task(game_task.result().progress_world())
-            return game_task
+    @output
+    @render.text
+    # @reactive.Calc
+    async def updating_world_header_text():
+        print("updating_world_header_text")
+        progress_task = progress_task_val.get()
+        print("updating_world_header_text", progress_task)
+        if progress_task.done():
+            print("invalidate_done")
+            game = progress_task.result()
+            progress_task = None
+            ui.update_navs("pages", selected="page_world_interact")
+            world_nav = generate_world_tab(game)
+            ui.nav_remove("world_interact_tabs", "world_nav")
+            ui.nav_insert(
+                "world_interact_tabs",
+                world_nav,
+                target="npcs_nav_menu",
+                position="before",
+            )
+            npcs = game.npcs
+            for npc in reversed(npcs):
+                npc_nav = generate_npc_tab(npc)
+
+                ui.nav_remove("world_interact_tabs", npc.name.lower().replace(" ", "_"))
+                ui.nav_insert(
+                    "world_interact_tabs",
+                    npc_nav,
+                    target="npc_placeholder",
+                    position="after",
+                )
+
+            ui.update_navs("world_interact_tabs", selected="world_nav")
+
+            return "World is updated"
+        else:
+            reactive.invalidate_later(3)
+            print("invalidate_loading")
+            return "Updating world..."
+
+    # @reactive.Calc
+    async def progress_world(game: Game):
+        progress_task = asyncio.create_task(game.progress_world())
+        print("calc progress task", progress_task)
+        return progress_task
 
     # @reactive.Effect
     # @reactive.event(input.check_world)
@@ -153,17 +204,28 @@ def server(input, output, session):
         if game_task.done():
             print("invalidate_done")
             ui.update_navs("pages", selected="page_world_interact")
-            npcs = game_task.result().npcs
+            game = game_task.result()
+            world_nav = generate_world_tab(game)
+            ui.nav_insert(
+                "world_interact_tabs",
+                world_nav,
+                target="npcs_nav_menu",
+                position="before",
+            )
+
+            ui.nav_hide("world_interact_tabs", "npc_placeholder")
+            npcs = game.npcs
             for npc in reversed(npcs):
-                npc_value, npc_content = generate_npc_tab(npc)
-                npc_nav = ui.nav(npc.name, npc_content, value=npc_value)
+                npc_nav = generate_npc_tab(npc)
+                # npc_nav = ui.nav(npc.name, npc_content, value=npc_value)
                 ui.nav_insert(
                     "world_interact_tabs",
                     npc_nav,
                     target="npc_placeholder",
                     position="after",
                 )
-            ui.nav_remove("world_interact_tabs", "npc_placeholder")
+            # ui.nav_remove("world_interact_tabs", "npc_placeholder")
+            ui.update_navs("world_interact_tabs", selected="world_nav")
         else:
             reactive.invalidate_later(3)
             print("invalidate_loading")
@@ -183,28 +245,28 @@ def server(input, output, session):
     async def world_interact_header():
         return await get_world_data("cur_world.name")
 
-    @output
-    @render.text
-    async def world_current_state():
-        return await get_world_data("cur_world.current_state_prompt")
+    # @output
+    # @render.text
+    # async def world_current_state():
+    #     return await get_world_data("cur_world.current_state_prompt")
 
-    @output
-    @render.text
-    async def world_current_date():
-        current_date_to_str_func = await get_world_data("current_date_to_str")
-        return current_date_to_str_func()
+    # @output
+    # @render.text
+    # async def world_current_date():
+    #     current_date_to_str_func = await get_world_data("current_date_to_str")
+    #     return current_date_to_str_func()
 
-    @output
-    @render.text
-    async def world_current_time():
-        current_time_to_str_func = await get_world_data("current_time_to_str")
-        return current_time_to_str_func()
+    # @output
+    # @render.text
+    # async def world_current_time():
+    #     current_time_to_str_func = await get_world_data("current_time_to_str")
+    #     return current_time_to_str_func()
 
-    @output
-    @render.text
-    async def world_current_temperature():
-        attributes = await get_world_data("cur_world.attributes")
-        return attributes["temperature"]
+    # @output
+    # @render.text
+    # async def world_current_temperature():
+    #     attributes = await get_world_data("cur_world.attributes")
+    #     return attributes["temperature"]
 
     @output
     @render.text
@@ -212,56 +274,6 @@ def server(input, output, session):
         tick_rate = await get_world_data("cur_world.tick_rate")
         tick_type = await get_world_data("cur_world.tick_type")
         return f"Wait {tick_rate} {tick_type}s"
-
-    # @output
-    # @render.text
-    # async def world_interact_header():
-    #     game_task = await generate_world()
-    #     if game_task.done():
-    #         return game_task.result().cur_world.name
-    #     else:
-    #         reactive.invalidate_later(3)
-    #         return "Loading..."
-
-    # @output
-    # @render.text
-    # async def world_current_state():
-    #     game_task = await generate_world()
-    #     if game_task.done():
-    #         return game_task.result().cur_world.current_state_prompt
-    #     else:
-    #         reactive.invalidate_later(3)
-    #         return "Loading..."
-
-    # @output
-    # @render.text
-    # async def world_current_date():
-    #     game_task = await generate_world()
-    #     if game_task.done():
-    #         return game_task.result().current_date_to_str()
-    #     else:
-    #         reactive.invalidate_later(3)
-    #         return "Loading..."
-
-    # @output
-    # @render.text
-    # async def world_current_time():
-    #     game_task = await generate_world()
-    #     if game_task.done():
-    #         return game_task.result().current_time_to_str()
-    #     else:
-    #         reactive.invalidate_later(3)
-    #         return "Loading..."
-
-    # @output
-    # @render.text
-    # async def world_current_temperature():
-    #     game_task = await generate_world()
-    #     if game_task.done():
-    #         return game_task.result().cur_world.attributes["temperature"]
-    #     else:
-    #         reactive.invalidate_later(3)
-    #         return "Loading..."
 
 
 www_dir = Path(__file__).parent / "www"
