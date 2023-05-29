@@ -429,6 +429,11 @@ def populate_dataclass_with_dicts(dataclass, dicts_to_add: list[list]):
     return
 
 
+def is_year_leap(year: int):
+    """Return True for leap years, False for non-leap years."""
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
 class YamlDumperDoubleQuotes(yaml.Dumper):
     def represent_scalar(self, tag, value, style=None):
         if value == "":

@@ -22,6 +22,7 @@ from utils import (
     dataclass_to_dict_copy,
     load_yaml,
     get_previous_to_last_modified_file,
+    is_year_leap,
 )
 import validators
 from prompt_toolkit import prompt
@@ -259,12 +260,19 @@ class Game:
 
         self.cur_world.current_tick += 1
 
-        if self.cur_world.tick_type == "day":
+        if self.cur_world.tick_type in ("day", "year"):
             timeformat = self.cur_world.tick_type[0].capitalize()
         else:
             timeformat = self.cur_world.tick_type[0]
 
-        time_delta = np.timedelta64(self.cur_world.tick_rate, timeformat)
+        if not self.cur_world.tick_type == "year":
+            time_delta = np.timedelta64(self.cur_world.tick_rate, timeformat)
+        else:
+            if is_year_leap(self.cur_time.astype("datetime64[Y]").astype(int)):
+                days = 366
+            else:
+                days = 365
+            time_delta = np.timedelta64(self.cur_world.tick_rate * days, "D")
 
         new_time = self.cur_time + time_delta
 
@@ -877,12 +885,21 @@ class Game:
 
 
 if __name__ == "__main__":
-    with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
-        npc_yaml_template = yaml.safe_load(f)
+    # with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
+    #     npc_yaml_template = yaml.safe_load(f)
 
-    t = ["happiness", "health", "hunger", "love", "rested", "stress", "wealth"]
+    # t = ["happiness", "health", "hunger", "love", "rested", "stress", "wealth"]
 
-    for i in t:
-        npc_yaml_template["attributes"][i] = 0
-    print(npc_yaml_template["attributes"])
-    print(npc_yaml_template)
+    # for i in t:
+    #     npc_yaml_template["attributes"][i] = 0
+    # print(npc_yaml_template["attributes"])
+    # print(npc_yaml_template)
+
+    cur_time = to_datetime(2021, 1, 1, 0, 0, 0)
+    print(cur_time.astype("datetime64[Y]"))
+    time_delta = np.timedelta64(1, "Y")
+    time_delta_d = np.timedelta64(365, "D")
+
+    print(type(time_delta.astype("datetime64[Y]").astype(int)))
+    new_time = cur_time + time_delta_d
+    print(new_time)
