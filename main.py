@@ -13,9 +13,6 @@ def main():
     game.input_handler(Input.init_world)
     # game.input_handler(Input.init.npcs)
 
-    # print(game.cur_world)
-    # print(game.global_goals)
-
     while True:
         game.prompt_next_action()
         # game.input_handler(Input.tick.increment)

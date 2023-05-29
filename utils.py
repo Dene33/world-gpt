@@ -9,6 +9,7 @@ import itertools
 import numpy as np
 from dataclasses import fields
 import typing
+from logging import info
 
 
 class bcolors:
@@ -153,7 +154,7 @@ def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path)
     if yaml_path:
         yaml_dataclass.load(path=yaml_path)
     else:
-        print(f"Can't load yaml from path: {yaml_path}, path doesn't exist")
+        info(f"Can't load yaml from path: {yaml_path}, path doesn't exist")
 
     return
 
@@ -175,7 +176,7 @@ async def request_openai(
 
     for i in tries_range:
         try:
-            print(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
+            info(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
             response = await openai.ChatCompletion.acreate(
                 api_key=api_key,
                 model=model,
@@ -185,7 +186,7 @@ async def request_openai(
             # get the response
             response_content = response["choices"][0]["message"]["content"]
             if verbose:
-                print(response_content)
+                info(response_content)
             if response_processor:
                 processed_response = response_processor(response_content)
             else:
@@ -197,7 +198,7 @@ async def request_openai(
             break
 
     if not processed_response:
-        print(
+        info(
             f"{bcolors.FAIL}OpenAI request failed, check your key and prompt or increase the number of request tries{bcolors.ENDC}"
         )
         return None
@@ -448,29 +449,9 @@ if __name__ == "__main__":
     settings.load(path="./settings.yaml")
 
     w = World()
-    # w.attributes["temperature"] = 32
-    # w.name = "Test"
-    # print(fields(w))
-    print(w)
+    info(w)
     populate_dataclass_with_dicts(
         w, [settings.world_attributes_names, settings.world_time_names]
     )
     save_yaml_from_data("./test.yaml", w)
-    print(w)
-
-#     # print(t)
-#     s = """```yaml
-# name: 'Mircea Popescu'
-# global_goal: 'To become the village's best storyteller'
-# attributes:
-#   happiness: 5
-#   health: 8
-#   hunger: 3
-#   love: 2
-#   rested: 7
-#   stress: 2
-#   wealth: 4
-# current_state_prompt: 'Mircea is currently sitting outside of his house, enjoying the warm weather and watching the river flow by. He is lost in thought, composing a new story to tell his fellow villagers tonight at the market square.'
-# ```"""
-#     t = yaml_from_str(s)
-#     print(t["name"])
+    info(w)

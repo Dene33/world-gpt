@@ -35,6 +35,7 @@ prompt-toolkit==3.0.38
 ptyprocess==0.7.0
 pydantic==1.10.7
 PyJWT==2.7.0
+python-dotenv==1.0.0
 python-multipart==0.0.6
 PyYAML==6.0
 requests==2.28.2

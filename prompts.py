@@ -10,6 +10,7 @@ from utils import (
 import openai
 from prompt_toolkit import prompt
 import yaml
+from logging import info
 
 
 new_world_state_request = Template(
@@ -77,29 +78,6 @@ if __name__ == "__main__":
         "/mnt/Shared/Demania/repos/world-gpt/data/games/Test Game/worlds/Test_World/world_tick_0.yaml",
     )
 
-    # npc_0 = Npc()
-    # npc_1 = Npc()
-
-    # npcs = [npc_0, npc_1]
-
-    # with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
-    #     npc_yaml_template = yaml.safe_load(f)
-
-    # for attribute in settings.npc_attributes_names:
-    #     npc_yaml_template["attributes"][attribute] = 0
-
-    # populate_dataclass_with_dicts(npc_0, [settings.npc_attributes_names])
-
-    # create_npc_request = create_npc_request.format(
-    #     world_general_description=world.current_state_prompt,
-    #     world_current_attributes=world.attributes,
-    #     npc_yaml_template=yaml.dump(
-    #         npc_0, sort_keys=False, Dumper=YamlDumperDoubleQuotes
-    #     ),
-    #     global_goal="To become a wise old sage and pass on knowledge to the next generation",
-    # )
-    # print(create_npc_request)
-
     with open(YAML_TEMPLATES_PATH / "npc_social_connections.yaml", "r") as f:
         npc_social_connections = yaml.safe_load(f)
 
@@ -151,8 +129,6 @@ if __name__ == "__main__":
         ],
     )
 
-    # print(create_social_connections_request)
-
     world_new_state_request = world_new_state.format(
         init_state=world.current_state_prompt,
         previous_state=world.current_state_prompt,
@@ -162,8 +138,6 @@ if __name__ == "__main__":
         tick_rate=world.tick_rate,
         tick_type=world.tick_type,
     )
-
-    # print(world_new_state_request)
 
     npc_0.social_connections = ["Radu Carp"]
 
@@ -178,7 +152,4 @@ if __name__ == "__main__":
         tick_type=world.tick_type,
     )
 
-    print(npc_new_state_request)
-
-    # print(original_npcs)
-    # print(other_npcs)
+    info(npc_new_state_request)

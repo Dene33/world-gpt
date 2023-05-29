@@ -39,12 +39,14 @@ import openai
 import random
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import sys
+from logging import info
 
 
 @dataclass
 class Settings(YamlDataClassConfig):
     LLM_model: str = ""
     API_key: str = ""
+    openai_verbose: bool = False
     llm_request_tries_num: int = -1
     npc_history_steps: int = 0
     npc_attributes_names: list[str] = field(default_factory=list)
@@ -178,14 +180,14 @@ class Game:
             tick_type=self.cur_world.tick_type,
         )
 
-        print(world_new_state_request)
+        info(world_new_state_request)
 
         new_world_state = await request_openai(
             model=self.settings.LLM_model,
             prompt=world_new_state_request,
             tries_num=self.settings.llm_request_tries_num,
             response_processor=yaml_from_str,
-            verbose=True,
+            verbose=self.settings.openai_verbose,
             api_key=self.settings.API_key,
         )
 
@@ -235,7 +237,7 @@ class Game:
             prompt=npc_new_state_request,
             tries_num=self.settings.llm_request_tries_num,
             response_processor=yaml_from_str,
-            verbose=True,
+            verbose=self.settings.openai_verbose,
             api_key=self.settings.API_key,
         )
 
@@ -286,7 +288,7 @@ class Game:
             self.cur_world.time["current_era"],
         ) = from_datetime(new_time)
 
-        print(
+        info(
             f"{bcolors.OKGREEN}{self.cur_world.tick_rate} {self.cur_world.tick_type}s have passed...{bcolors.ENDC}"
         )
         self.print_current_time()
@@ -328,7 +330,7 @@ class Game:
         self.game_path = GAMES_PATH / self.game_name
         Path(self.game_path / "worlds").mkdir(parents=True, exist_ok=True)
 
-        print(f"{bcolors.OKGREEN}The game: {self.game_name} is created{bcolors.ENDC}")
+        info(f"{bcolors.OKGREEN}The game: {self.game_name} is created{bcolors.ENDC}")
 
         return
 
@@ -340,11 +342,9 @@ class Game:
             )
             self.game_path = GAMES_PATH / self.game_name
 
-            print(
-                f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}"
-            )
+            info(f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}")
         else:
-            print(
+            info(
                 f"{bcolors.FAIL}No existing games found. Create a new game.{bcolors.ENDC}"
             )
             self.input_handler(Input.init_game)
@@ -407,8 +407,8 @@ class Game:
 
     def new_world_from_ui(self, world_data: dict):
         self.cur_world.name = world_data["name"]
-        print(self.cur_world.name)
-        print(type(self.cur_world.name))
+        info(self.cur_world.name)
+        info(type(self.cur_world.name))
 
         for attribute_key in self.cur_world.attributes.keys():
             new_attribute_value = world_data["attributes"].get(attribute_key, None)
@@ -428,7 +428,7 @@ class Game:
 
         self.save_world()
 
-        print(
+        info(
             f"{bcolors.OKGREEN}The world {self.cur_world.name} is created from UI{bcolors.ENDC}"
         )
 
@@ -479,7 +479,7 @@ class Game:
 
         self.save_world()
 
-        print(
+        info(
             f"{bcolors.OKGREEN}The world {self.cur_world.name} is created from template {world_template_name}{bcolors.ENDC}"
         )
 
@@ -589,7 +589,7 @@ class Game:
 
         self.save_world()
 
-        print(
+        info(
             f"{bcolors.OKGREEN}The world {self.cur_world.name} is loaded from input{bcolors.ENDC}"
         )
 
@@ -613,7 +613,7 @@ class Game:
             oldest_modified_world = yaml.safe_load(f)
         self.world_general_description = oldest_modified_world["current_state_prompt"]
 
-        print(
+        info(
             f"{bcolors.OKGREEN}The world: {self.cur_world.name} is loaded{bcolors.ENDC}"
         )
 
@@ -624,7 +624,7 @@ class Game:
             self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
 
         for npc_num in range(self.settings.number_of_npcs):
-            print(
+            info(
                 f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.settings.number_of_npcs}...{bcolors.ENDC}"
             )
             new_npc = Npc()
@@ -646,7 +646,7 @@ class Game:
                 prompt=new_npc_prompt,
                 tries_num=self.settings.llm_request_tries_num,
                 response_processor=yaml_from_str,
-                verbose=True,
+                verbose=self.settings.openai_verbose,
                 api_key=self.settings.API_key,
             )
 
@@ -659,7 +659,7 @@ class Game:
 
             load_yaml_to_dataclass(new_npc, new_npc_yaml_path)
 
-            print(
+            info(
                 f"{bcolors.OKGREEN}NPC {new_npc.name} generated successfully{bcolors.ENDC}"
             )
 
@@ -679,7 +679,7 @@ class Game:
             self.npcs.append(new_npc)
 
     async def new_global_goals(self):
-        print(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
+        info(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
 
         # Duplicate, refactor later
         with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
@@ -709,17 +709,17 @@ class Game:
             prompt=create_global_goals_prompt,
             tries_num=self.settings.llm_request_tries_num,
             response_processor=yaml_from_str,
-            verbose=True,
+            verbose=self.settings.openai_verbose,
             api_key=self.settings.API_key,
         )
 
         self.save_global_goals()
-        print(f"{bcolors.OKGREEN}Global goals generated successfully{bcolors.ENDC}")
+        info(f"{bcolors.OKGREEN}Global goals generated successfully{bcolors.ENDC}")
 
         return
 
     async def new_npcs_social_connections(self):
-        print(
+        info(
             f"{bcolors.OKCYAN}Generating social connections between NPCs...{bcolors.ENDC}"
         )
         keys_to_delete = [
@@ -759,7 +759,7 @@ class Game:
                 prompt=create_social_connections_prompt,
                 tries_num=self.settings.llm_request_tries_num,
                 response_processor=yaml_from_str,
-                verbose=True,
+                verbose=self.settings.openai_verbose,
                 api_key=self.settings.API_key,
             )
 
@@ -805,7 +805,7 @@ class Game:
     def is_in_existing_items(self, existing_items: List | None, item_name: str):
         in_existing_items = False
         if not existing_items:
-            print(
+            info(
                 f"{bcolors.FAIL}No existing {item_name}s found. Create a new {item_name}.{bcolors.ENDC}"
             )
 
@@ -819,7 +819,7 @@ class Game:
         self.print_current_time()
 
         npc_names = [npc.name for npc in self.npcs]
-        print(
+        info(
             f"\n"
             f"{bcolors.OKBLUE}World name: {bcolors.ENDC}{self.cur_world.name}\n"
             f"{bcolors.OKBLUE}Current state: {bcolors.ENDC}{self.cur_world.current_state_prompt}\n"
@@ -836,7 +836,7 @@ class Game:
 
     def print_info_npcs(self):
         for npc in self.npcs:
-            print(
+            info(
                 f"\n"
                 f"{bcolors.OKBLUE}NPC name: {bcolors.ENDC}{npc.name}\n"
                 f"{bcolors.OKBLUE}Current state: {bcolors.ENDC}{npc.current_state_prompt}\n"
@@ -875,12 +875,12 @@ class Game:
             f"Current time:{bcolors.ENDC} {self.current_time_to_str()}, {self.current_date_to_str()}"
         )
 
-        print(current_time)
+        info(current_time)
 
         return
 
     def quit_game(self):
-        print(f"{bcolors.OKCYAN}Quitting game...{bcolors.ENDC}")
+        info(f"{bcolors.OKCYAN}Quitting game...{bcolors.ENDC}")
         sys.exit(0)
 
 
@@ -892,14 +892,12 @@ if __name__ == "__main__":
 
     # for i in t:
     #     npc_yaml_template["attributes"][i] = 0
-    # print(npc_yaml_template["attributes"])
-    # print(npc_yaml_template)
 
     cur_time = to_datetime(2021, 1, 1, 0, 0, 0)
-    print(cur_time.astype("datetime64[Y]"))
+    info(cur_time.astype("datetime64[Y]"))
     time_delta = np.timedelta64(1, "Y")
     time_delta_d = np.timedelta64(365, "D")
 
-    print(type(time_delta.astype("datetime64[Y]").astype(int)))
+    info(type(time_delta.astype("datetime64[Y]").astype(int)))
     new_time = cur_time + time_delta_d
-    print(new_time)
+    info(new_time)

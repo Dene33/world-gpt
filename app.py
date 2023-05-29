@@ -1,3 +1,4 @@
+import os
 from shiny import App, render, ui, reactive
 import shinyswatch
 from classes import Settings, Game
@@ -21,6 +22,15 @@ from shiny.types import ImgData
 from operator import attrgetter
 import random
 from copy import copy, deepcopy
+import logging
+from logging import info
+from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO)
+logging.disable(logging.INFO)
+
+# Comment to disable logging and uncomment to enable logging
+# logging.disable(logging.NOTSET)
 
 app_ui = ui.page_fluid(
     {"id": "app-content"},
@@ -29,17 +39,17 @@ app_ui = ui.page_fluid(
         ui.tags.link(rel="stylesheet", type="text/css", href="css/style.css"),
     ),
     ui.tags.body(
-        ui.input_select(
-            "page_select",
-            "Select page",
-            [
-                "page_home",
-                "page_world_create",
-                "page_world_loading",
-                "page_world_interact",
-                "page_world_updating",
-            ],
-        ),
+        # ui.input_select(
+        #     "page_select",
+        #     "Select page",
+        #     [
+        #         "page_home",
+        #         "page_world_create",
+        #         "page_world_loading",
+        #         "page_world_interact",
+        #         "page_world_updating",
+        #     ],
+        # ),
         ui.navset_hidden(
             ui.nav("Home page", PAGE_HOME, value="page_home"),
             ui.nav("Create a new world", PAGE_WORLD_CREATE, value="page_world_create"),
@@ -81,11 +91,11 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.to_page_world_updating)
     async def _():
-        print("Update the world")
+        info("Update the world")
         game_task = await generate_world()
         game = game_task.result()
         progress_task = progress_task_val.set(await progress_world(game))
-        print("to_page_world_updating", progress_task)
+        info("to_page_world_updating", progress_task)
         ui.update_navs("pages", selected="page_world_updating")
 
     @reactive.Calc
@@ -115,8 +125,14 @@ def server(input, output, session):
             "tick_rate": input.new_world_tick_rate(),
             "current_state_prompt": input.new_world_description(),
         }
+
+        api_key = input.API_key()
+        if not api_key:
+            load_dotenv()
+            api_key = os.environ.get("OPENAI_API_KEY")
+
         settings_data = {
-            "API_key": input.API_key(),
+            "API_key": api_key,
             "number_of_npcs": int(input.new_world_npc_num()),
         }
 
@@ -131,11 +147,11 @@ def server(input, output, session):
     @render.text
     # @reactive.Calc
     async def updating_world_header_text():
-        print("updating_world_header_text")
+        info("updating_world_header_text")
         progress_task = progress_task_val.get()
-        print("updating_world_header_text", progress_task)
+        info("updating_world_header_text", progress_task)
         if progress_task.done():
-            print("invalidate_done")
+            info("invalidate_done")
             game = progress_task.result()
             progress_task = None
             ui.update_navs("pages", selected="page_world_interact")
@@ -164,13 +180,13 @@ def server(input, output, session):
             return "World is updated"
         else:
             reactive.invalidate_later(3)
-            print("invalidate_loading")
+            info("invalidate_loading")
             return "Updating world..."
 
     # @reactive.Calc
     async def progress_world(game: Game):
         progress_task = asyncio.create_task(game.progress_world())
-        print("calc progress task", progress_task)
+        info("calc progress task", progress_task)
         return progress_task
 
     # @reactive.Effect
@@ -202,7 +218,7 @@ def server(input, output, session):
     async def loading_world_header_text():
         game_task = await generate_world()
         if game_task.done():
-            print("invalidate_done")
+            info("invalidate_done")
             ui.update_navs("pages", selected="page_world_interact")
             game = game_task.result()
             world_nav = generate_world_tab(game)
@@ -228,7 +244,7 @@ def server(input, output, session):
             ui.update_navs("world_interact_tabs", selected="world_nav")
         else:
             reactive.invalidate_later(3)
-            print("invalidate_loading")
+            info("invalidate_loading")
             return "World is initializing..."
 
     async def get_world_data(attribute):
