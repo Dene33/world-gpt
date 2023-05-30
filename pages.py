@@ -61,7 +61,7 @@ are engaged in crafts, and in times of war or danger, they rely on a small milit
 from nearby castle.",
             placeholder="World description",
             width="100%",
-            rows=8,
+            rows=6,
             resize="none",
         ),
         ui.row(
@@ -140,7 +140,7 @@ from nearby castle.",
             "Create new world",
             width="100%",
         ),
-        class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
+        class_="main-page-container main-page-container col-lg-9 col-md-10 col-sm-12 col-12 mx-auto",
     )
 )
 
@@ -294,8 +294,8 @@ def generate_npc_tab(npc: Npc):
                     ui.div(
                         "Attributes",
                         ui.pre(
-                            str(npc.attributes)[1:-1],
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                            str(npc.attributes)[1:-1].replace(", ", ",\n"),
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll npc-attributes",
                         ),
                     ),
                 ),

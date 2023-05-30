@@ -128,7 +128,7 @@ def server(input, output, session):
 
         api_key = input.API_key()
         if not api_key:
-            load_dotenv()
+            load_dotenv("openai_key")
             api_key = os.environ.get("OPENAI_API_KEY")
 
         settings_data = {
@@ -149,7 +149,6 @@ def server(input, output, session):
     async def updating_world_header_text():
         info("updating_world_header_text")
         progress_task = progress_task_val.get()
-        info("updating_world_header_text", progress_task)
         if progress_task.done():
             info("invalidate_done")
             game = progress_task.result()

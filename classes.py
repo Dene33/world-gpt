@@ -23,6 +23,8 @@ from utils import (
     load_yaml,
     get_previous_to_last_modified_file,
     is_year_leap,
+    check_yaml_update_npc,
+    check_yaml_new_npc
 )
 import validators
 from prompt_toolkit import prompt
@@ -186,7 +188,7 @@ class Game:
             model=self.settings.LLM_model,
             prompt=world_new_state_request,
             tries_num=self.settings.llm_request_tries_num,
-            response_processor=yaml_from_str,
+            response_processors=[yaml_from_str],
             verbose=self.settings.openai_verbose,
             api_key=self.settings.API_key,
         )
@@ -236,7 +238,7 @@ class Game:
             model=self.settings.LLM_model,
             prompt=npc_new_state_request,
             tries_num=self.settings.llm_request_tries_num,
-            response_processor=yaml_from_str,
+            response_processors=[yaml_from_str, check_yaml_update_npc],
             verbose=self.settings.openai_verbose,
             api_key=self.settings.API_key,
         )
@@ -645,7 +647,7 @@ class Game:
                 model=self.settings.LLM_model,
                 prompt=new_npc_prompt,
                 tries_num=self.settings.llm_request_tries_num,
-                response_processor=yaml_from_str,
+                response_processors=[yaml_from_str, check_yaml_new_npc],
                 verbose=self.settings.openai_verbose,
                 api_key=self.settings.API_key,
             )
@@ -708,7 +710,7 @@ class Game:
             model=self.settings.LLM_model,
             prompt=create_global_goals_prompt,
             tries_num=self.settings.llm_request_tries_num,
-            response_processor=yaml_from_str,
+            response_processors=[yaml_from_str],
             verbose=self.settings.openai_verbose,
             api_key=self.settings.API_key,
         )
@@ -758,7 +760,7 @@ class Game:
                 model=self.settings.LLM_model,
                 prompt=create_social_connections_prompt,
                 tries_num=self.settings.llm_request_tries_num,
-                response_processor=yaml_from_str,
+                response_processors=[yaml_from_str],
                 verbose=self.settings.openai_verbose,
                 api_key=self.settings.API_key,
             )
@@ -893,11 +895,23 @@ if __name__ == "__main__":
     # for i in t:
     #     npc_yaml_template["attributes"][i] = 0
 
-    cur_time = to_datetime(2021, 1, 1, 0, 0, 0)
-    info(cur_time.astype("datetime64[Y]"))
-    time_delta = np.timedelta64(1, "Y")
-    time_delta_d = np.timedelta64(365, "D")
+    # cur_time = to_datetime(2021, 1, 1, 0, 0, 0)
+    # info(cur_time.astype("datetime64[Y]"))
+    # time_delta = np.timedelta64(1, "Y")
+    # time_delta_d = np.timedelta64(365, "D")
 
-    info(type(time_delta.astype("datetime64[Y]").astype(int)))
-    new_time = cur_time + time_delta_d
-    info(new_time)
+    # info(type(time_delta.astype("datetime64[Y]").astype(int)))
+    # new_time = cur_time + time_delta_d
+    # info(new_time)
+
+    t = yaml_from_str(
+        """
+npc_new_state: "Ragnar the Warrior spends the day on a successful raid against bandits, showcasing his improved sword fighting skills. However, he suffers from a minor injury, decreasing his health by 1, while also gaining 1 happiness and 2 stress from the adrenaline rush of battle."
+
+attributes:
+health: -1
+happiness: 1
+stress: 2"""
+    )
+
+    print(t.get("npc_new_state"))

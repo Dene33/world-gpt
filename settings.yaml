@@ -6,7 +6,7 @@ npc_history_steps: 0 # number of previous npc states to store
 npc_attributes_names: ['happiness', 'health', 'hunger', 'love', 'rested', 'stress', 'wealth'] # list of NPC attributes that will be used in the game
 max_attribute_delta: 5 # maximum attribute delta for each NPC
 npc_num_global_goals: 25 # number of NPC global goals to generate, each NPC will choose one from that list
-max_npc_social_connections: 10 # maximum number of social connections for each NPC
+max_npc_social_connections: 5 # maximum number of social connections for each NPC
 number_of_npcs: 5 # number of NPCs to generate
 # world_attributes_names: ['temperature', 'number_of_npcs', 'max_npc_social_connections']
 world_attributes_names: ['temperature']

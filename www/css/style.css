@@ -83,7 +83,8 @@ white-space: pre-wrap; /* css-3 */
   white-space: normal; /* crucial for IE 6, maybe 7? */
 }
 
-#world_progress_button {
+#world_progress_button,
+#to_page_world_updating {
   margin-top: 12px;
 }
 
@@ -107,10 +108,18 @@ white-space: pre-wrap; /* css-3 */
   --bs-nav-link-color: white;
   --bs-nav-link-hover-color: white;
   --bs-nav-link-disabled-color: white;
+  margin-bottom: auto;
 }
 
 .card-header-tabs .nav-link.active {
   background-color: #474747;
   border-bottom-color: #474747;
   color: white;
+}
+
+.npc-attributes {
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
+  white-space: -o-pre-wrap;
+  word-wrap: break-word;
 }

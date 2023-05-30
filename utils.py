@@ -159,11 +159,44 @@ def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path)
     return
 
 
+def check_yaml_update_npc(data_yaml: dict):
+    print("check_yaml_update_npc")
+    if not data_yaml.get("npc_new_state"):
+        print("no npc_new_state")
+        raise Exception
+    if not data_yaml.get("attributes"):
+        print("no attributes")
+        raise Exception
+
+    return data_yaml
+
+
+def check_yaml_new_npc(data_yaml: dict):
+    print("check_yaml_new_npc")
+    if not data_yaml.get("name"):
+        print("no name")
+        raise Exception
+    if not data_yaml.get("global_goal"):
+        print("no global_goal")
+        raise Exception
+    if not data_yaml.get("attributes"):
+        print("no attributes")
+        raise Exception
+    if not "social_connections" in data_yaml.keys():
+        print("no social_connections")
+        raise Exception
+    if not data_yaml.get("current_state_prompt"):
+        print("no current_state_prompt")
+        raise Exception
+
+    return data_yaml
+
+
 async def request_openai(
     model: str,
     prompt: str,
     tries_num: int = -1,
-    response_processor=None,
+    response_processors=[],
     verbose=False,
     api_key: str = None,
 ):
@@ -187,12 +220,16 @@ async def request_openai(
             response_content = response["choices"][0]["message"]["content"]
             if verbose:
                 info(response_content)
-            if response_processor:
-                processed_response = response_processor(response_content)
+            if response_processors:
+                processed_response = response_content
+                for response_processor in response_processors:
+                    print(processed_response)
+                    processed_response = response_processor(processed_response)
             else:
                 processed_response = response_content
 
         except Exception as e:
+            processed_response = None
             continue
         else:
             break

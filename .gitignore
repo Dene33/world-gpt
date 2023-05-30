@@ -136,3 +136,4 @@ data/*
 !data/yaml_templates/
 !data/init_worlds/
 TODO.md
+openai_key
