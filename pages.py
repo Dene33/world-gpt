@@ -1,15 +1,16 @@
 from shiny import App, render, ui, reactive
 import shinyswatch
 from classes import Npc, Game
+from utils import add_tooltip
 
 PAGE_HOME = ui.TagList(
     ui.div(
         {"id": "page-0-content"},
-        ui.h1("WorldGPT"),
+        ui.h1("Try it for free"),
         ui.div(
             ui.div(
                 ui.p(
-                    "WorldGPT is a groundbreaking app that brings your imagination to life. \
+                    "Story Generator is a groundbreaking app that brings your imagination to life. \
             Input your world description, and watch as an entire universe unfolds before your eyes. \
             With ChatGPT as the backbone, witness the progression of your world and observe \
             lifelike NPCs as they navigate its intricacies. Experience the joy of creation \
@@ -36,109 +37,171 @@ PAGE_HOME = ui.TagList(
 PAGE_WORLD_CREATE = ui.TagList(
     ui.div(
         {"id": "create-world-content"},
-        ui.h1("Create a new world"),
-        ui.input_password(
-            "API_key",
-            "OpenAI key",
-            placeholder="Provide your OpenAI key. Optional",
-            value="",
-            width="100%",
+        ui.h1("Try it for free"),
+        add_tooltip(
+            ui.input_text(
+                "new_world_name",
+                "World name",
+                placeholder="World name",
+                value="My world",
+                width="100%",
+            ),
+            "The name of your world",
         ),
-        ui.input_text(
-            "new_world_name",
-            "World name",
-            placeholder="World name",
-            value="My world",
-            width="100%",
-        ),
-        ui.input_text_area(
-            "new_world_description",
-            "World description",
-            value="A mid-sized village situated by the river in medieval Moldova. \
+        add_tooltip(
+            ui.input_text_area(
+                "new_world_description",
+                "Input your world description",
+                value="A mid-sized village situated by the river in medieval Moldova. \
 It has a self-sufficient community surrounded by a wooden palisade. There is a market \
 square, a church, and fields for growing crops and grazing livestock. The villagers \
 are engaged in crafts, and in times of war or danger, they rely on a small militia \
 from nearby castle.",
-            placeholder="World description",
-            width="100%",
-            rows=6,
-            resize="none",
+                placeholder="World description",
+                width="100%",
+                rows=6,
+                resize="none",
+            ),
+            "The prompt for ChatGPT to generate the world",
         ),
         ui.row(
             {"id": "create-world-settings"},
-            ui.input_numeric(
-                "new_world_tick_rate", "Tick Rate", min=1, value=1, width="25%"
+            add_tooltip(
+                ui.input_numeric(
+                    "new_world_tick_rate", "Tick Rate", min=1, value=1, width="25%"
+                ),
+                "How much time of Tick Type passes between each tick. You can interact and observe the world between each tick",
             ),
-            ui.input_select(
-                "new_world_tick_type",
-                "Tick type",
-                ["day", "year", "hour", "minute", "second"],
-                width="25%",
+            add_tooltip(
+                ui.input_select(
+                    "new_world_tick_type",
+                    "Tick type",
+                    ["day", "year", "hour", "minute", "second"],
+                    width="25%",
+                ),
+                "The type of time that passes between each tick",
             ),
-            ui.input_select(
-                "new_world_npc_num",
-                "# NPCs",
-                [*range(1, 16)],
-                selected=5,
-                width="25%",
+            add_tooltip(
+                ui.input_select(
+                    "new_world_npc_num",
+                    "# NPCs",
+                    [*range(1, 16)],
+                    selected=5,
+                    width="25%",
+                ),
+                "The number of NPCs in the world",
             ),
-            ui.input_numeric(
-                "new_world_temperature",
-                "t (°C)",
-                value=18,
-                width="25%",
+            add_tooltip(
+                ui.input_numeric(
+                    "new_world_temperature",
+                    "t (°C)",
+                    value=0,
+                    width="25%",
+                ),
+                "The initial temperature of the world",
             ),
         ),
         ui.row(
             {"id": "create-world-datetime"},
-            ui.input_numeric("new_world_year", "Year", value=1000, width="25%"),
-            ui.input_select(
-                "new_world_era",
-                "Era",
-                ["AD", "BC"],
-                width="25%",
+            add_tooltip(
+                ui.input_numeric("new_world_year", "Year", value=1000, width="25%"),
+                "The initial year of the world",
             ),
-            ui.input_select(
-                "new_world_day",
-                "Day",
-                [*range(1, 32)],
-                width="25%",
+            add_tooltip(
+                ui.input_select(
+                    "new_world_era",
+                    "Era",
+                    ["AD", "BC"],
+                    width="25%",
+                ),
+                "The initial era of the world",
             ),
-            ui.input_select(
-                "new_world_month",
-                "Month",
-                {
-                    "1": "January",
-                    "2": "February",
-                    "3": "March",
-                    "4": "April",
-                    "5": "May",
-                    "6": "June",
-                    "7": "July",
-                    "8": "August",
-                    "9": "September",
-                    "10": "October",
-                    "11": "November",
-                    "12": "December",
-                },
-                width="25%",
+            add_tooltip(
+                ui.input_select(
+                    "new_world_day",
+                    "Day",
+                    [*range(1, 32)],
+                    width="25%",
+                ),
+                "The initial day of the world",
+            ),
+            add_tooltip(
+                ui.input_select(
+                    "new_world_month",
+                    "Month",
+                    {
+                        "1": "January",
+                        "2": "February",
+                        "3": "March",
+                        "4": "April",
+                        "5": "May",
+                        "6": "June",
+                        "7": "July",
+                        "8": "August",
+                        "9": "September",
+                        "10": "October",
+                        "11": "November",
+                        "12": "December",
+                    },
+                    width="25%",
+                ),
+                "The initial month of the world",
             ),
         ),
         ui.row(
-            ui.input_select(
-                "new_world_hour", "Hour", [*range(0, 24)], selected=12, width="33.3%"
+            add_tooltip(
+                ui.input_select(
+                    "new_world_hour",
+                    "Hour",
+                    [*range(0, 24)],
+                    selected=12,
+                    width="33.3%",
+                ),
+                "The initial hour of the world",
             ),
-            ui.input_select(
-                "new_world_minute", "Minute", [*range(0, 60)], selected=0, width="33.3%"
+            add_tooltip(
+                ui.input_select(
+                    "new_world_minute",
+                    "Minute",
+                    [*range(0, 60)],
+                    selected=0,
+                    width="33.3%",
+                ),
+                "The initial minute of the world",
             ),
-            ui.input_select(
-                "new_world_second", "Second", [*range(0, 60)], selected=0, width="33.3%"
+            add_tooltip(
+                ui.input_select(
+                    "new_world_second",
+                    "Second",
+                    [*range(0, 60)],
+                    selected=0,
+                    width="33.3%",
+                ),
+                "The initial second of the world",
             ),
         ),
-        ui.input_action_button(
-            "to_page_world_loading",
-            "Create new world",
-            width="100%",
+        add_tooltip(
+            ui.input_password(
+                "API_key",
+                "OpenAI key",
+                placeholder="Provide your OpenAI key. Optional",
+                value="",
+                width="100%",
+            ),
+            "Your OpenAI API key. Optional",
+        ),
+        ui.div(
+            ui.input_action_button(
+                "to_page_world_loading",
+                "Create new world",
+                width="100%",
+            ),
+        ),
+        ui.tags.script(
+            """
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        """
         ),
         class_="main-page-container main-page-container col-lg-9 col-md-10 col-sm-12 col-12 mx-auto",
     )
@@ -157,6 +220,12 @@ PAGE_WORLD_LOADING = ui.TagList(
                 src="img/loading.svg",
                 class_="loading_world_image",
             ),
+            ui.div(
+                ui.span(
+                    "The process of generating the world relies on ChatGPT. It typically takes between 1 to 3 minutes to complete, and the time it takes depends on the number of NPCs",
+                ),
+                style_="margin-top: 40px;",
+            ),
         ),
         class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
     )
@@ -174,6 +243,12 @@ PAGE_WORLD_UPDATING = ui.TagList(
                 id="loading_world_image",
                 src="img/loading.svg",
                 class_="loading_world_image",
+            ),
+            ui.div(
+                ui.span(
+                    "The process of updating the world relies on ChatGPT. It typically takes between 1 to 2 minutes to complete, and the time it takes depends on the number of NPCs",
+                ),
+                style_="margin-top: 40px;",
             ),
         ),
         class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",

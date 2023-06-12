@@ -37,6 +37,7 @@ app_ui = ui.page_fluid(
     shinyswatch.theme.sketchy(),
     ui.tags.head(
         ui.tags.link(rel="stylesheet", type="text/css", href="css/style.css"),
+        ui.tags.script(src="js/iframeResizer.contentWindow.min.js"),
     ),
     ui.tags.body(
         # ui.input_select(
@@ -51,7 +52,7 @@ app_ui = ui.page_fluid(
         #     ],
         # ),
         ui.navset_hidden(
-            ui.nav("Home page", PAGE_HOME, value="page_home"),
+            # ui.nav("Home page", PAGE_HOME, value="page_home"),
             ui.nav("Create a new world", PAGE_WORLD_CREATE, value="page_world_create"),
             ui.nav("Loading page", PAGE_WORLD_LOADING, value="page_world_loading"),
             ui.nav(
@@ -180,7 +181,7 @@ def server(input, output, session):
         else:
             reactive.invalidate_later(3)
             info("invalidate_loading")
-            return "Updating world..."
+            return "Updating the world..."
 
     # @reactive.Calc
     async def progress_world(game: Game):

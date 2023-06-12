@@ -1,1 +1,1 @@
-# world-gpt
+# Story Generator

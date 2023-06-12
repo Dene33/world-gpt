@@ -472,6 +472,13 @@ def is_year_leap(year: int):
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
 
+def add_tooltip(obj, tip, placement="top"):
+    obj.attrs["data-bs-toggle"] = "tooltip"
+    obj.attrs["data-bs-placement"] = placement
+    obj.attrs["data-bs-title"] = tip
+    return obj
+
+
 class YamlDumperDoubleQuotes(yaml.Dumper):
     def represent_scalar(self, tag, value, style=None):
         if value == "":

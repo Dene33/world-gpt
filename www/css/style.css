@@ -8,8 +8,8 @@ body {
 
 h1 {
   text-align: center;
-  padding-top: 120px;
-  padding-bottom: 60px;
+  padding-top: 20px;
+  padding-bottom: 10px;
 }
 
 /* Make text visible on inputs */
@@ -25,10 +25,10 @@ h1 {
   border: 0;
 }
 
-.main-page-container {
+/* .main-page-container {
   padding-left: 15%;
   padding-right: 15%;
-}
+} */
 
 .main-page-button {
   margin-top: 40px;
@@ -122,4 +122,8 @@ white-space: pre-wrap; /* css-3 */
   white-space: -moz-pre-wrap;
   white-space: -o-pre-wrap;
   word-wrap: break-word;
+}
+
+.row {
+  --bs-gutter-x: 0.1rem;
 }
