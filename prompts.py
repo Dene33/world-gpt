@@ -6,11 +6,13 @@ from utils import (
     yaml_from_str,
     save_yaml_from_data,
     populate_dataclass_with_dicts,
+    # debug,
 )
 import openai
 from prompt_toolkit import prompt
 import yaml
-from logging import info
+
+from logging import debug
 
 
 new_world_state_request = Template(
@@ -152,4 +154,4 @@ if __name__ == "__main__":
         tick_type=world.tick_type,
     )
 
-    info(npc_new_state_request)
+    debug(npc_new_state_request)

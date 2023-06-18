@@ -10,5 +10,12 @@ if platform.system() == "Windows":
     drive, apath = os.path.splitdrive(apath)
     apath = apath.replace("\\", "/")
 
-sys.argv = ["shiny", "run", "--port", "37955", apath]
+sys.argv = [
+    "shiny",
+    "run",
+    "--launch-browser",
+    "--port",
+    "37955",
+    apath,
+]
 main()

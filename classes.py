@@ -24,7 +24,8 @@ from utils import (
     get_previous_to_last_modified_file,
     is_year_leap,
     check_yaml_update_npc,
-    check_yaml_new_npc
+    check_yaml_new_npc,
+    # debug,
 )
 import validators
 from prompt_toolkit import prompt
@@ -41,7 +42,8 @@ import openai
 import random
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import sys
-from logging import info
+
+from logging import debug
 
 
 @dataclass
@@ -182,7 +184,7 @@ class Game:
             tick_type=self.cur_world.tick_type,
         )
 
-        info(world_new_state_request)
+        debug(world_new_state_request)
 
         new_world_state = await request_openai(
             model=self.settings.LLM_model,
@@ -290,7 +292,7 @@ class Game:
             self.cur_world.time["current_era"],
         ) = from_datetime(new_time)
 
-        info(
+        debug(
             f"{bcolors.OKGREEN}{self.cur_world.tick_rate} {self.cur_world.tick_type}s have passed...{bcolors.ENDC}"
         )
         self.print_current_time()
@@ -332,7 +334,7 @@ class Game:
         self.game_path = GAMES_PATH / self.game_name
         Path(self.game_path / "worlds").mkdir(parents=True, exist_ok=True)
 
-        info(f"{bcolors.OKGREEN}The game: {self.game_name} is created{bcolors.ENDC}")
+        debug(f"{bcolors.OKGREEN}The game: {self.game_name} is created{bcolors.ENDC}")
 
         return
 
@@ -344,9 +346,11 @@ class Game:
             )
             self.game_path = GAMES_PATH / self.game_name
 
-            info(f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}")
+            debug(
+                f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}"
+            )
         else:
-            info(
+            debug(
                 f"{bcolors.FAIL}No existing games found. Create a new game.{bcolors.ENDC}"
             )
             self.input_handler(Input.init_game)
@@ -409,8 +413,8 @@ class Game:
 
     def new_world_from_ui(self, world_data: dict):
         self.cur_world.name = world_data["name"]
-        info(self.cur_world.name)
-        info(type(self.cur_world.name))
+        debug(self.cur_world.name)
+        debug(type(self.cur_world.name))
 
         for attribute_key in self.cur_world.attributes.keys():
             new_attribute_value = world_data["attributes"].get(attribute_key, None)
@@ -430,7 +434,7 @@ class Game:
 
         self.save_world()
 
-        info(
+        debug(
             f"{bcolors.OKGREEN}The world {self.cur_world.name} is created from UI{bcolors.ENDC}"
         )
 
@@ -481,7 +485,7 @@ class Game:
 
         self.save_world()
 
-        info(
+        debug(
             f"{bcolors.OKGREEN}The world {self.cur_world.name} is created from template {world_template_name}{bcolors.ENDC}"
         )
 
@@ -591,7 +595,7 @@ class Game:
 
         self.save_world()
 
-        info(
+        debug(
             f"{bcolors.OKGREEN}The world {self.cur_world.name} is loaded from input{bcolors.ENDC}"
         )
 
@@ -615,7 +619,7 @@ class Game:
             oldest_modified_world = yaml.safe_load(f)
         self.world_general_description = oldest_modified_world["current_state_prompt"]
 
-        info(
+        debug(
             f"{bcolors.OKGREEN}The world: {self.cur_world.name} is loaded{bcolors.ENDC}"
         )
 
@@ -626,7 +630,7 @@ class Game:
             self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
 
         for npc_num in range(self.settings.number_of_npcs):
-            info(
+            debug(
                 f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.settings.number_of_npcs}...{bcolors.ENDC}"
             )
             new_npc = Npc()
@@ -661,7 +665,7 @@ class Game:
 
             load_yaml_to_dataclass(new_npc, new_npc_yaml_path)
 
-            info(
+            debug(
                 f"{bcolors.OKGREEN}NPC {new_npc.name} generated successfully{bcolors.ENDC}"
             )
 
@@ -681,7 +685,7 @@ class Game:
             self.npcs.append(new_npc)
 
     async def new_global_goals(self):
-        info(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
+        debug(f"{bcolors.OKCYAN}Generating global goals for NPCs...{bcolors.ENDC}")
 
         # Duplicate, refactor later
         with open(YAML_TEMPLATES_PATH / "npc.yaml", "r") as f:
@@ -716,12 +720,12 @@ class Game:
         )
 
         self.save_global_goals()
-        info(f"{bcolors.OKGREEN}Global goals generated successfully{bcolors.ENDC}")
+        debug(f"{bcolors.OKGREEN}Global goals generated successfully{bcolors.ENDC}")
 
         return
 
     async def new_npcs_social_connections(self):
-        info(
+        debug(
             f"{bcolors.OKCYAN}Generating social connections between NPCs...{bcolors.ENDC}"
         )
         keys_to_delete = [
@@ -807,7 +811,7 @@ class Game:
     def is_in_existing_items(self, existing_items: List | None, item_name: str):
         in_existing_items = False
         if not existing_items:
-            info(
+            debug(
                 f"{bcolors.FAIL}No existing {item_name}s found. Create a new {item_name}.{bcolors.ENDC}"
             )
 
@@ -821,7 +825,7 @@ class Game:
         self.print_current_time()
 
         npc_names = [npc.name for npc in self.npcs]
-        info(
+        debug(
             f"\n"
             f"{bcolors.OKBLUE}World name: {bcolors.ENDC}{self.cur_world.name}\n"
             f"{bcolors.OKBLUE}Current state: {bcolors.ENDC}{self.cur_world.current_state_prompt}\n"
@@ -838,7 +842,7 @@ class Game:
 
     def print_info_npcs(self):
         for npc in self.npcs:
-            info(
+            debug(
                 f"\n"
                 f"{bcolors.OKBLUE}NPC name: {bcolors.ENDC}{npc.name}\n"
                 f"{bcolors.OKBLUE}Current state: {bcolors.ENDC}{npc.current_state_prompt}\n"
@@ -877,12 +881,12 @@ class Game:
             f"Current time:{bcolors.ENDC} {self.current_time_to_str()}, {self.current_date_to_str()}"
         )
 
-        info(current_time)
+        debug(current_time)
 
         return
 
     def quit_game(self):
-        info(f"{bcolors.OKCYAN}Quitting game...{bcolors.ENDC}")
+        debug(f"{bcolors.OKCYAN}Quitting game...{bcolors.ENDC}")
         sys.exit(0)
 
 
@@ -896,22 +900,26 @@ if __name__ == "__main__":
     #     npc_yaml_template["attributes"][i] = 0
 
     # cur_time = to_datetime(2021, 1, 1, 0, 0, 0)
-    # info(cur_time.astype("datetime64[Y]"))
+    # debug(cur_time.astype("datetime64[Y]"))
     # time_delta = np.timedelta64(1, "Y")
     # time_delta_d = np.timedelta64(365, "D")
 
-    # info(type(time_delta.astype("datetime64[Y]").astype(int)))
+    # debug(type(time_delta.astype("datetime64[Y]").astype(int)))
     # new_time = cur_time + time_delta_d
-    # info(new_time)
+    # debug(new_time)
 
-    t = yaml_from_str(
-        """
-npc_new_state: "Ragnar the Warrior spends the day on a successful raid against bandits, showcasing his improved sword fighting skills. However, he suffers from a minor injury, decreasing his health by 1, while also gaining 1 happiness and 2 stress from the adrenaline rush of battle."
+    #     t = yaml_from_str(
+    #         """
+    # npc_new_state: "Ragnar the Warrior spends the day on a successful raid against bandits, showcasing his improved sword fighting skills. However, he suffers from a minor injury, decreasing his health by 1, while also gaining 1 happiness and 2 stress from the adrenaline rush of battle."
 
-attributes:
-health: -1
-happiness: 1
-stress: 2"""
-    )
+    # attributes:
+    # health: -1
+    # happiness: 1
+    # stress: 2"""
+    #     )
 
-    print(t.get("npc_new_state"))
+    #     print(t.get("npc_new_state"))
+    settings = Settings()
+    settings.load(path="settings.yaml")
+
+    print(settings)

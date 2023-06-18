@@ -9,7 +9,8 @@ import itertools
 import numpy as np
 from dataclasses import fields
 import typing
-from logging import info
+import logging
+from logging import debug
 
 
 class bcolors:
@@ -154,39 +155,39 @@ def load_yaml_to_dataclass(yaml_dataclass: YamlDataClassConfig, yaml_path: Path)
     if yaml_path:
         yaml_dataclass.load(path=yaml_path)
     else:
-        info(f"Can't load yaml from path: {yaml_path}, path doesn't exist")
+        debug(f"Can't load yaml from path: {yaml_path}, path doesn't exist")
 
     return
 
 
 def check_yaml_update_npc(data_yaml: dict):
-    print("check_yaml_update_npc")
+    debug("check_yaml_update_npc")
     if not data_yaml.get("npc_new_state"):
-        print("no npc_new_state")
+        debug("no npc_new_state")
         raise Exception
     if not data_yaml.get("attributes"):
-        print("no attributes")
+        debug("no attributes")
         raise Exception
 
     return data_yaml
 
 
 def check_yaml_new_npc(data_yaml: dict):
-    print("check_yaml_new_npc")
+    debug("check_yaml_new_npc")
     if not data_yaml.get("name"):
-        print("no name")
+        debug("no name")
         raise Exception
     if not data_yaml.get("global_goal"):
-        print("no global_goal")
+        debug("no global_goal")
         raise Exception
     if not data_yaml.get("attributes"):
-        print("no attributes")
+        debug("no attributes")
         raise Exception
     if not "social_connections" in data_yaml.keys():
-        print("no social_connections")
+        debug("no social_connections")
         raise Exception
     if not data_yaml.get("current_state_prompt"):
-        print("no current_state_prompt")
+        debug("no current_state_prompt")
         raise Exception
 
     return data_yaml
@@ -209,7 +210,7 @@ async def request_openai(
 
     for i in tries_range:
         try:
-            info(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
+            debug(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
             response = await openai.ChatCompletion.acreate(
                 api_key=api_key,
                 model=model,
@@ -219,11 +220,11 @@ async def request_openai(
             # get the response
             response_content = response["choices"][0]["message"]["content"]
             if verbose:
-                info(response_content)
+                debug(response_content)
             if response_processors:
                 processed_response = response_content
                 for response_processor in response_processors:
-                    print(processed_response)
+                    debug(processed_response)
                     processed_response = response_processor(processed_response)
             else:
                 processed_response = response_content
@@ -235,7 +236,7 @@ async def request_openai(
             break
 
     if not processed_response:
-        info(
+        debug(
             f"{bcolors.FAIL}OpenAI request failed, check your key and prompt or increase the number of request tries{bcolors.ENDC}"
         )
         return None
@@ -493,9 +494,9 @@ if __name__ == "__main__":
     settings.load(path="./settings.yaml")
 
     w = World()
-    info(w)
+    debug(w)
     populate_dataclass_with_dicts(
         w, [settings.world_attributes_names, settings.world_time_names]
     )
     save_yaml_from_data("./test.yaml", w)
-    info(w)
+    debug(w)
