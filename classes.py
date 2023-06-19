@@ -418,7 +418,7 @@ class Game:
 
         for attribute_key in self.cur_world.attributes.keys():
             new_attribute_value = world_data["attributes"].get(attribute_key, None)
-            if new_attribute_value:
+            if new_attribute_value is not None:
                 self.cur_world.attributes[attribute_key] = new_attribute_value
         self.cur_world.time = world_data["time"]
         self.cur_world.tick_type = world_data["tick_type"]
