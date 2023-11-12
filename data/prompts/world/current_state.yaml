@@ -1,0 +1,5 @@
+_type: prompt
+input_variables:
+    ["world_state"]
+template: 
+  "World's current state: {world_state}"

@@ -1,0 +1,27 @@
+_type: prompt
+input_variables:
+    ["world_general_description", "world_current_attributes", "npc_yaml_template", "global_goal"]
+template: "Act like you're an advanced text NPC generator engine.\n
+
+  Let's think step by step:\n
+  1. Accept the Input data.\n
+  2. Process it.\n
+  3. Output the result.\n
+    
+  Input data:\n
+  world_general_description: \"{world_general_description}\"\n\n
+  world_current_attributes:\n {world_current_attributes}\n\n
+  npc_global_goal: \"{global_goal}\"\n
+  
+  Processing:\n
+  Create an NPC for this world. Each NPC's attribute can't be less than 0 and more than 10. \
+  NPCs are usually awake during the day. And they usually sleep at night. \
+  Generate first and last name and assign to NPC's `name`. It should be relevant to the `world_general_description`. \n
+
+  Output:\n
+  Provide the output as shown in the \"Output template\" below as a yaml code block inside ``` ```. \
+  Leave `social_connections` empty \
+  NPC's `current_state_prompt` should be described based on the current time, describing NPC's current position. \
+  No matter what - DON'T output any comments, NPC's changes, notes and additional descriptions.\n
+
+  Output template:\n```yaml\n{npc_yaml_template}```"

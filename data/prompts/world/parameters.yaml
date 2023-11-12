@@ -1,0 +1,6 @@
+_type: prompt
+input_variables:
+    ["temperature", "day", "month", "year", "era", "hour", "minute", "second", "pm_am", "daytime"]
+template: "\ \ temperature: {temperature}\n
+  \ \ date: \"{day} {month} {year} {era}\"\n  
+  \ \ time: \"{hour}:{minute}:{second} {pm_am}, {daytime}\""

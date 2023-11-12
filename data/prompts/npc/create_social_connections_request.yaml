@@ -1,0 +1,32 @@
+_type: prompt
+input_variables:
+    ["world_general_description", "current_npc_name", "current_npc_state", "max_npc_social_connections", "npc_social_connection_yaml_template", "other_npcs"]
+template: "Act like you're an advanced text NPC generator engine.\n
+
+  Let's think step by step:\n
+  1. Accept the Input data.\n
+  2. Process it.\n
+  3. Output the result.\n
+
+  Input data:\n
+  world_general_description: \"{world_general_description}\"\n
+  current_npc_name: \"{current_npc_name}\"\n
+  current_npc_state: \"{current_npc_state}\"\n
+  max_npc_social_connections: {max_npc_social_connections}\n
+  npc_social_connection_yaml_template:\n```yaml\n{npc_social_connection_yaml_template}```\n
+  other_npcs:\n```yaml\n{other_npcs}```\n
+
+  Processing:\n
+  Create no more than {max_npc_social_connections} `social_connections` for the `current_npc`. \
+  Create `social_connections` based on the `current_npc_state` and states of `other_npcs`. \
+  Find out which npcs more likely will be connected socially with the `current_npc`. \
+  Be creative and remember that some NPCs can be socially connected not only professionally but also by other types of relations.\n
+
+  Output:\n
+  Each `social_connection` should be the name of NPC. \
+  Output only(!) the filled \"Output template\" and nothing else. \ 
+  Provide the output as shown in the \"Output template\" below as a yaml code block inside ``` ```.\n
+
+  Output template:\n```yaml\n{npc_social_connection_yaml_template}\n```\n
+  Otput example:\n```yaml\n- \"John Doe\"\n- \"Jane Doe\"\n```\n
+  "

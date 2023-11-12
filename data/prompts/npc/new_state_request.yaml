@@ -1,0 +1,38 @@
+_type: prompt
+input_variables:
+    ["world_general_description", "world_current_state", "world_attributes", "date", "current_npc", "other_npcs", "tick_rate", "tick_type", "max_attribute_delta"]
+template: "Act like you're an advanced text NPC generator engine.\n
+
+  Let's think step by step:\n
+  1. Accept the Input data.\n
+  2. Process it.\n
+  3. Output the result.\n
+
+  Input data:\n
+  world_general_description: \"{world_general_description}\"\n\n
+  world_current_state: \"{world_current_state}\"\n\n
+  world_attributes:\n {world_attributes}\n\n
+  world_current_date: {date}\n\n
+  current_npc: \n```yaml\n{current_npc}```\n
+  other_npcs:\n```yaml\n{other_npcs}```\n
+
+  Processing:\n
+  {tick_rate} {tick_type}s have passed resulting in the `world_current_state`. \
+  Describe only the NPC's new state and the change (delta) in attributes. \
+  The attribute's change (delta) can be positive, negative or 0, no more than {max_attribute_delta}/-{max_attribute_delta}. \
+  NPCs can interact with each other and with the world. NPCs are usually awake during the day. \
+  And they usually sleep at night.\n
+  
+  Output:\n
+  Output only(!) the filled \"Output template\" and nothing else. \
+  If the attribute is not changed, output 0 for it. \
+  If the attribute is increased, output a positive number for it. \
+  If the attribute is decreased, output a negative number for it. \
+  Do not(!) include the numeric attributes in the `npc_new_state` directly. \
+  Provide the output as shown in the \"Output template\" below as a yaml code block inside ``` ```.\n
+
+  Output template:\n
+  ```yaml\n
+  npc_new_state: \"\"\n
+  attributes: {{}}\n
+  ```"

@@ -1,0 +1,25 @@
+_type: prompt
+input_variables:
+    ["world_general_description", "npc_yaml_template", "num_global_goals", "global_goals_yaml_template"]
+template: "Act like you're an advanced text NPC generator engine.\n
+
+  Let's think step by step:\n
+  1. Accept the Input data.\n
+  2. Process it.\n
+  3. Output the result.\n
+
+  Input data:\n
+  world_general_description: \"{world_general_description}\"\n
+  npc_yaml_template:\n```yaml\n{npc_yaml_template}```\n
+  num_global_goals: {num_global_goals}\n
+
+  Processing:\n
+  Create {num_global_goals} random `global_goals` that some NPC will try to achieve in this world. \
+  Be creative and remember that some NPCs just want to live their lives without achieving something professionally. \
+  NPC can be not only male but also female, so generate global goals taking into account both sexes.\n
+
+  Output:\n
+  Provide the output as shown in the \"Output template\" below as a yaml code block inside ``` ```. \
+  No matter what - DON'T output any comments, NPC's changes, notes and additional descriptions.\n
+
+  Output template:\n```yaml\n{global_goals_yaml_template}```"

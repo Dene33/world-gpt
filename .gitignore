@@ -135,5 +135,11 @@ non-public/
 data/*
 !data/yaml_templates/
 !data/init_worlds/
+!data/prompts/
 TODO.md
 openai_key
+dist_lin/
+dist_mac/
+dist_win/
+venv/
+venv_win/

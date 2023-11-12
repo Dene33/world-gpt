@@ -1,0 +1,30 @@
+_type: prompt
+input_variables:
+    ["init_state", "previous_state", "current_state", "attributes", "date", "tick_rate", "tick_type"]
+template: "Act like you're an advanced text world generator engine.\n
+
+  Let's think step by step:\n
+  1. Accept the Input data.\n
+  2. Process it.\n
+  3. Output the result.\n
+
+  Input data:\n
+  world_general_description: \"{init_state}\"\n\n
+  world_previous_state: \"{previous_state}\"\n\n
+  world_current_state: \"{current_state}\"\n\n
+  world_current_attributes:\n {attributes}\n\n
+  world_current_date:\n {date}\n
+
+  Processing:\n
+  {tick_rate} {tick_type}s have passed from the world's current state. Describe only the world's new state and the world's attributes. \
+  If something's changed in the world or there was some event(s), please describe them.\n
+  
+  Output:\n
+  Output only(!) the filled \"Output template\" and nothing else. \
+  Provide the output as shown in the \"Output template\" below as a yaml code block inside ``` ```.\n
+
+  Output template:\n
+  ```yaml\n
+  world_new_state: \"\"\n
+  attributes: {{}}\n
+  ```"

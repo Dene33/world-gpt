@@ -1,0 +1,5 @@
+_type: prompt
+input_variables:
+    ["world_state"]
+template: 
+  "Here is the world general description: {world_state}"
