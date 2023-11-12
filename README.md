@@ -20,7 +20,7 @@ OpenAI's ChatGPT blew my mind and I got an idea about using it as a tool for wor
 
 Ultimately, the world's and NPC's conditions converge to create an exceptional story.
 
-[Try it for free](https://www.story-generator.ai/) or [buy it](https://dene33.gumroad.com/l/story-generator?referrer=https%3A%2F%2Fwww.story-generator.ai%2Fpricing%2F&wanted=true) as a standalone app. The latter option includes the complete source code and requires a one-time payment only (no subscriptions!). Story Generator is built entirely using [Shiny](https://shiny.posit.co/py/) so if you want to know how to build web apps with Shiny alongside ChatGPT in an asynchronous manner that's a great source of knowledge! Additionally, you can employ Story Generator in your own game by customizing the code to suit your requirements.
+[Try it for free on the web](https://www.story-generator.ai/), [Try it for free locally](https://github.com/Dene33/world-gpt/releases), or [buy it to support the creator](https://dene33.gumroad.com/l/story-generator?referrer=https%3A%2F%2Fwww.story-generator.ai%2Fpricing%2F&wanted=true). The latter option includes the complete source code and requires a one-time payment only (no subscriptions!). Story Generator is built entirely using [Shiny](https://shiny.posit.co/py/) so if you want to know how to build web apps with Shiny alongside ChatGPT in an asynchronous manner that's a great source of knowledge! Additionally, you can employ Story Generator in your own game by customizing the code to suit your requirements.
 
 ## Install from source
 1. Clone the repo
