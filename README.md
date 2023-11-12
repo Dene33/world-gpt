@@ -28,3 +28,5 @@ Ultimately, the world's and NPC's conditions converge to create an exceptional s
 3. Install all the requirement packages with `pip install -r requirements.txt`
 4. Finally run the app with `python ./story_generator.py`
 5. Provide your OpenAI key. [See here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key). This repo doesn't contain the OpenAI key
+
+https://ko-fi.com/dene33
