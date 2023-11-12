@@ -136,6 +136,7 @@ data/*
 !data/yaml_templates/
 !data/init_worlds/
 !data/prompts/
+!data/games/.gitkeep
 TODO.md
 openai_key
 dist_lin/
