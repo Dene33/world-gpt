@@ -1,6 +1,6 @@
 # Story Generator
 
-![image](https://github.com/Dene33/world-gpt/assets/27821127/8a3384a4-0000-46ff-a4ea-b6fefbd7378c)
+![cover](https://github.com/Dene33/world-gpt/assets/27821127/b8a09e3e-e79f-47ff-900e-cba31197738f)
 
 Story Generator is a groundbreaking app that brings your imagination to life. Input your world description, and watch as an entire universe unfolds before your eyes. With ChatGPT as the backbone, witness the progression of your world and observe lifelike NPCs as they navigate their intricacies. Experience the joy of creation in real-time, all within the palm of your hand.
 
