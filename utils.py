@@ -200,6 +200,8 @@ async def request_openai(
     response_processors=[],
     verbose=False,
     api_key: str = None,
+    model_type: str = "chat",
+    **params
 ):
     processed_response = None
 
@@ -211,23 +213,38 @@ async def request_openai(
     for i in tries_range:
         try:
             debug(f"{bcolors.OKBLUE}OpenAI request try {i+1}...{bcolors.ENDC}")
-            response = await openai.ChatCompletion.acreate(
-                api_key=api_key,
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-            )
 
-            # get the response
-            response_content = response["choices"][0]["message"]["content"]
-            if verbose:
-                debug(response_content)
-            if response_processors:
-                processed_response = response_content
-                for response_processor in response_processors:
-                    debug(processed_response)
-                    processed_response = response_processor(processed_response)
-            else:
-                processed_response = response_content
+            if model_type == "chat":
+                response = await openai.ChatCompletion.acreate(
+                    api_key=api_key,
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+
+                # get the response
+                response_content = response["choices"][0]["message"]["content"]
+                if verbose:
+                    debug(response_content)
+                if response_processors:
+                    processed_response = response_content
+                    for response_processor in response_processors:
+                        debug(processed_response)
+                        processed_response = response_processor(processed_response)
+                else:
+                    processed_response = response_content
+
+            elif model_type == "image":
+                response = await openai.Image.acreate(
+                    api_key=api_key,
+                    prompt=prompt,
+                    model=model, # Adjust if OpenAI has specified a different name for the DALL·E 3 model
+                    size=params['img_size'],
+                    quality=params['img_quality'],
+                    n=params['img_n'],
+                )
+
+                processed_response = response.data[0].url
+                debug(processed_response)
 
         except Exception as e:
             processed_response = None

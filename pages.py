@@ -184,7 +184,7 @@ from nearby castle.",
             ui.input_password(
                 "API_key",
                 "OpenAI key",
-                placeholder="Provide your OpenAI key. Optional",
+                placeholder="Provide your OpenAI key. Now it's GPT4 + Dall-e 3 so the free version is limited to N requests per month"",
                 value="",
                 width="100%",
             ),
@@ -288,11 +288,24 @@ PAGE_WORLD_INTERACT = ui.TagList(
 
 def generate_world_tab(game: Game):
     world_content = ui.TagList(
-        ui.div(
-            "World state",
-            ui.pre(
-                game.cur_world.current_state_prompt,
-                class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+        ui.row(
+            ui.column(
+                6,
+                ui.div(
+                    "World state",
+                    ui.pre(
+                        game.cur_world.current_state_prompt,
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll world_current_state",
+                    ),
+                ),
+            ),
+            ui.column(
+                6,
+                ui.img(
+                    id="generated_world_image",
+                    src=game.cur_world.image_url,
+                    class_="generated_world_image",
+                ),
             ),
         ),
         ui.row(

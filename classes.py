@@ -49,6 +49,10 @@ from logging import debug
 @dataclass
 class Settings(YamlDataClassConfig):
     LLM_model: str = ""
+    text_to_image_model: str = ""
+    text_to_image_size: str = ""
+    text_to_image_quality: str = ""
+    text_to_image_n: int = 1
     API_key: str = ""
     openai_verbose: bool = False
     llm_request_tries_num: int = -1
@@ -72,6 +76,7 @@ class World(YamlDataClassConfig):
     tick_rate: int = 0  # how much time of tick_type passes in the world per tick
     current_tick: int = 0  # indicates how many ticks passed
     current_state_prompt: str = ""
+    image_url: str = ""
 
 
 @dataclass
@@ -196,6 +201,24 @@ class Game:
         )
 
         self.cur_world.current_state_prompt = new_world_state["world_new_state"]
+
+        if self.settings.text_to_image_model:
+            world_image_link = await request_openai(
+                model=self.settings.text_to_image_model,
+                prompt=self.cur_world.current_state_prompt,
+                tries_num=self.settings.llm_request_tries_num,
+                response_processors=[],
+                verbose=self.settings.openai_verbose,
+                api_key=self.settings.API_key,
+                model_type="image",
+                img_size=self.settings.text_to_image_size,
+                img_quality=self.settings.text_to_image_quality,
+                img_n=self.settings.text_to_image_n,
+            )
+
+            self.cur_world.image_url = world_image_link
+
+            debug(world_image_link)
 
         for attribute_key in self.cur_world.attributes.keys():
             new_attribute_value = new_world_state["attributes"].get(attribute_key, None)
@@ -371,7 +394,7 @@ class Game:
 
         # New World
         if new_or_load.lower() in ["n", "new"]:
-            self.new_world(world_data)
+            await self.new_world(world_data)
 
             self.cur_npcs_path: Path = self.cur_world_path / "npcs"
             self.cur_global_goals_path: Path = self.cur_npcs_path / "global_goals.yaml"
@@ -386,7 +409,7 @@ class Game:
 
         return self
 
-    def new_world(self, world_data: dict = None):
+    async def new_world(self, world_data: dict = None):
         # Add the world attributes and time attributes to the current world from the settings
         populate_dataclass_with_dicts(
             self.cur_world,
@@ -394,7 +417,7 @@ class Game:
         )
 
         if world_data:
-            self.new_world_from_ui(world_data)
+            await self.new_world_from_ui(world_data)
         else:
             template_or_input = prompt(
                 f"Create a new world from the predefined (t)emplate or (i)nput world settings manually? (t/i)",
@@ -411,7 +434,7 @@ class Game:
 
         return
 
-    def new_world_from_ui(self, world_data: dict):
+    async def new_world_from_ui(self, world_data: dict):
         self.cur_world.name = world_data["name"]
         debug(self.cur_world.name)
         debug(type(self.cur_world.name))
@@ -431,6 +454,24 @@ class Game:
         self.cur_world_path.mkdir(parents=True, exist_ok=True)
 
         self.world_general_description = self.cur_world.current_state_prompt
+
+        if self.settings.text_to_image_model:
+            world_image_link = await request_openai(
+                model=self.settings.text_to_image_model,
+                prompt=self.cur_world.current_state_prompt,
+                tries_num=self.settings.llm_request_tries_num,
+                response_processors=[],
+                verbose=self.settings.openai_verbose,
+                api_key=self.settings.API_key,
+                model_type="image",
+                img_size=self.settings.text_to_image_size,
+                img_quality=self.settings.text_to_image_quality,
+                img_n=self.settings.text_to_image_n,
+            )
+
+            self.cur_world.image_url = world_image_link
+
+            debug(world_image_link)
 
         self.save_world()
 
