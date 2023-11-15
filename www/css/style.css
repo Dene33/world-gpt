@@ -54,7 +54,7 @@ label {
 
 .generated_image {
   width: 100%;
-  float: right;
+  float: left;
   /* width: 20%; */
   /* height: 25%; */
   /* background: #555; */
@@ -65,7 +65,7 @@ label {
   background: rgba(73, 73, 73, 0.26);
 }
 
-.field-margin-right {
+.field-margin-left {
   margin-left: 1rem;
 }
 
