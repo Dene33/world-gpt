@@ -144,3 +144,4 @@ dist_mac/
 dist_win/
 venv/
 venv_win/
+rsconnect-python/world-gpt.json
