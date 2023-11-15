@@ -306,6 +306,14 @@ def generate_world_tab(game: Game):
         ui.row(
             ui.column(
                 6,
+                ui.img(
+                    id="generated_image",
+                    src=game.cur_world.image_url,
+                    class_="generated_image",
+                ),
+            ),
+            ui.column(
+                6,
                 ui.div(
                     "World state",
                     ui.pre(
@@ -335,14 +343,6 @@ def generate_world_tab(game: Game):
                     ),
                 ),
             ),
-            ui.column(
-                6,
-                ui.img(
-                    id="generated_image",
-                    src=game.cur_world.image_url,
-                    class_="generated_image",
-                ),
-            ),
         ),
     )
 
@@ -357,6 +357,14 @@ def generate_npc_tab(npc: Npc):
         ui.div(
             {"id": f"npc-content-{npc_value}"},
             ui.row(
+                ui.column(
+                    6,
+                    ui.img(
+                        id="generated_image",
+                        src=npc.image_url,
+                        class_="generated_image",
+                    ),
+                ),
                 ui.column(
                     6,
                     ui.div(
@@ -386,14 +394,6 @@ def generate_npc_tab(npc: Npc):
                             str(npc.attributes)[1:-1].replace(", ", ",\n"),
                             class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll npc-attributes field-margin-right",
                         ),
-                    ),
-                ),
-                ui.column(
-                    6,
-                    ui.img(
-                        id="generated_image",
-                        src=npc.image_url,
-                        class_="generated_image",
                     ),
                 ),
             ),
