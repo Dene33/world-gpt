@@ -184,7 +184,7 @@ from nearby castle.",
             ui.input_password(
                 "API_key",
                 "OpenAI key",
-                placeholder="Provide your OpenAI key. Now it's GPT4 + Dall-e 3 so the free version is limited to N requests per month"",
+                placeholder="Provide your OpenAI key. Now it's GPT4 + Dall-e 3 so the free version is limited to N requests per month",
                 value="",
                 width="100%",
             ),
