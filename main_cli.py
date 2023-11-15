@@ -1,3 +1,5 @@
+# This is a outdated version of the app. It was built to be run from the command line without UI.
+
 from classes import Settings, Game
 from pathlib import Path
 from utils import Input, ensure_dirs_exist
