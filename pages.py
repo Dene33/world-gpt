@@ -190,6 +190,17 @@ from nearby castle.",
             ),
             "Your OpenAI API key. Optional",
         ),
+        add_tooltip(
+            ui.input_checkbox_group(
+                "images_to_generate",
+                "Choose type of images to generate:",
+                {
+                    "text_to_image_generate_world": ui.span("World"),
+                    "text_to_image_generate_npcs": ui.span("Npcs"),
+                },
+            ),
+            "Choose type of images to generate. It will take more time to generate the result",
+        ),
         ui.div(
             ui.input_action_button(
                 "to_page_world_loading",
