@@ -52,7 +52,7 @@ label {
   /* background: #555; */
 }
 
-.generated_world_image {
+.generated_image {
   width: 100%;
   float: right;
   /* width: 20%; */
@@ -65,7 +65,7 @@ label {
   background: rgba(73, 73, 73, 0.26);
 }
 
-.world_current_state {
+.field-margin-right {
   margin-right: 1rem;
 }
 

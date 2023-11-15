@@ -3,6 +3,8 @@ text_to_image_model: ""
 text_to_image_size: ""
 text_to_image_quality: ""
 text_to_image_n: 1
+text_to_image_generate_world: False
+text_to_image_generate_npcs: False
 API_key: ""
 llm_request_tries_num: 5 # number of tries to get a response from LLM. -1 means infinite
 

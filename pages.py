@@ -295,48 +295,37 @@ def generate_world_tab(game: Game):
                     "World state",
                     ui.pre(
                         game.cur_world.current_state_prompt,
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll world_current_state",
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
+                    ),
+                ),
+                ui.div(
+                    "Date",
+                    ui.pre(
+                        game.current_date_to_str(),
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
+                    ),
+                ),
+                ui.div(
+                    "Time",
+                    ui.pre(
+                        game.current_time_to_str(),
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
+                    ),
+                ),
+                ui.div(
+                    "C°",
+                    ui.pre(
+                        game.cur_world.attributes["temperature"],
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
                     ),
                 ),
             ),
             ui.column(
                 6,
                 ui.img(
-                    id="generated_world_image",
+                    id="generated_image",
                     src=game.cur_world.image_url,
-                    class_="generated_world_image",
-                ),
-            ),
-        ),
-        ui.row(
-            ui.column(
-                6,
-                ui.div(
-                    "Date",
-                    ui.pre(
-                        game.current_date_to_str(),
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
-                ),
-            ),
-            ui.column(
-                4,
-                ui.div(
-                    "Time",
-                    ui.pre(
-                        game.current_time_to_str(),
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
-                ),
-            ),
-            ui.column(
-                2,
-                ui.div(
-                    "C°",
-                    ui.pre(
-                        game.cur_world.attributes["temperature"],
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
+                    class_="generated_image",
                 ),
             ),
         ),
@@ -352,39 +341,44 @@ def generate_npc_tab(npc: Npc):
     npc_content = ui.TagList(
         ui.div(
             {"id": f"npc-content-{npc_value}"},
-            ui.div(
-                "Name",
-                ui.pre(
-                    npc.name,
-                    class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                ),
-            ),
-            ui.div(
-                "State",
-                ui.pre(
-                    npc.current_state_prompt,
-                    class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                ),
-            ),
             ui.row(
                 ui.column(
                     6,
                     ui.div(
+                        "Name",
+                        ui.pre(
+                            npc.name,
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
+                        ),
+                    ),
+                    ui.div(
+                        "State",
+                        ui.pre(
+                            npc.current_state_prompt,
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
+                        ),
+                    ),
+                    ui.div(
                         "Goal",
                         ui.pre(
                             npc.global_goal,
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll field-margin-right",
+                        ),
+                    ),
+                    ui.div(
+                        "Attributes",
+                        ui.pre(
+                            str(npc.attributes)[1:-1].replace(", ", ",\n"),
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll npc-attributes field-margin-right",
                         ),
                     ),
                 ),
                 ui.column(
                     6,
-                    ui.div(
-                        "Attributes",
-                        ui.pre(
-                            str(npc.attributes)[1:-1].replace(", ", ",\n"),
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll npc-attributes",
-                        ),
+                    ui.img(
+                        id="generated_image",
+                        src=npc.image_url,
+                        class_="generated_image",
                     ),
                 ),
             ),
