@@ -33,6 +33,13 @@ Ultimately, the world's and NPC's conditions converge to create an exceptional s
 4. Finally run the app with `python ./story_generator.py`
 5. Provide your OpenAI key. [See here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key). This repo doesn't contain the OpenAI key
 
+## TODO
+1. ~~Text-to-image generation~~
+2. Generate the full story from the whole world's and NPCs' progress
+3. Allow user to manually adjust the world's and NPCs' state on the fly
+4. Save/load
+5. Track for NPCs' goal completion, keep memory of completed tasks, select new one(s)
+
 ## Support the author :heart:
 It really matters! At least it will allow to support the free web-version of the app (hosting, openai requests)
 
