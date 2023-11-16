@@ -6,7 +6,9 @@ World generation            |  NPC generation
 :-------------------------:|:-------------------------:
 ![image_sg3](https://github.com/Dene33/world-gpt/assets/27821127/80a8e236-f22e-480b-bb3e-64fa4cc1d075)  |  ![image_sg2](https://github.com/Dene33/world-gpt/assets/27821127/3ef90956-bc66-43cf-a6a1-dd63bbe307b9)
 
-Story Generator is a groundbreaking app that brings your imagination to life. Input your world description, and watch as an entire universe unfolds before your eyes. With ChatGPT as the backbone, witness the progression of your world and observe lifelike NPCs as they navigate their intricacies. Experience the joy of creation in real-time, all within the palm of your hand.
+Story Generator is an app, available as a [web version](https://www.story-generator.ai/) or a standalone for [Mac, Windows and Linux](https://github.com/Dene33/world-gpt/releases).
+
+With ChatGPT as the backbone, create your own world and observe lifelike characters interacting with each other and living their lives. All that from a **single text input** with your world description! 
 
 ## Idea
 
@@ -22,16 +24,18 @@ OpenAI's ChatGPT blew my mind and I got an idea about using it as a tool for wor
   
 - **Changing World Characteristics:** Various aspects of the world, such as its temperature and environment, dynamically shift and transform. These changes trigger a chain of events that prompt the NPCs to respond and adapt, creating a dynamic and realistic narrative
 
+- **Text-to-image Generation:** Generated textual descriptions of the world and characters are fed to the text-to-image (Dall-e 3 by default) model which generates wonderful images that support the story
+
 Ultimately, the world's and NPC's conditions converge to create an exceptional story.
 
-[Try it for free on the web](https://www.story-generator.ai/), [Try it for free locally](https://github.com/Dene33/world-gpt/releases), or [buy it to support the creator](https://dene33.gumroad.com/l/story-generator?referrer=https%3A%2F%2Fwww.story-generator.ai%2Fpricing%2F&wanted=true). The latter option includes the complete source code and requires a one-time payment only (no subscriptions!). Story Generator is built entirely using [Shiny](https://shiny.posit.co/py/) so if you want to know how to build web apps with Shiny alongside ChatGPT in an asynchronous manner that's a great source of knowledge! Additionally, you can employ Story Generator in your own game by customizing the code to suit your requirements.
+[Try it for free on the web](https://www.story-generator.ai/), [run it for free locally](https://github.com/Dene33/world-gpt/releases), or [buy it to support the creator](https://dene33.gumroad.com/l/story-generator?referrer=https%3A%2F%2Fwww.story-generator.ai%2Fpricing%2F&wanted=true). Story Generator is built entirely using [Shiny](https://shiny.posit.co/py/) so if you want to know how to build web apps with Shiny alongside ChatGPT in an asynchronous manner that's a great source of knowledge! Additionally, you can employ Story Generator in your own game by customizing the code to suit your requirements.
 
 ## Install from source
 1. Clone the repo
 2. Create a Python 3.10 environment, here is how you can do it with conda `conda create -n worldgpt python=3.10.6`
 3. Install all the requirement packages with `pip install -r requirements.txt`
 4. Finally run the app with `python ./story_generator.py`
-5. Provide your OpenAI key. [See here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key). This repo doesn't contain the OpenAI key
+5. Provide your OpenAI key. [See here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key). This repo doesn't contain the OpenAI key. If you want to try it for free, visit https://www.story-generator.ai/ It might be available if the usage of my openai key has not exceed the limits :) 
 
 ## TODO
 1. ~~Text-to-image generation~~
