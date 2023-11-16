@@ -29,4 +29,12 @@ Ultimately, the world's and NPC's conditions converge to create an exceptional s
 4. Finally run the app with `python ./story_generator.py`
 5. Provide your OpenAI key. [See here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key). This repo doesn't contain the OpenAI key
 
-https://ko-fi.com/dene33
+## Support the author :heart:
+It really matters! At least it will allow to support the free web-version of the app (hosting, openai requests)
+
+[Ko-Fi](https://ko-fi.com/dene33)
+
+[GitHub sponsorship](https://github.com/sponsors/Dene)
+
+[Gumroad](https://dene33.gumroad.com/l/story-generator?referrer=https%3A%2F%2Fwww.story-generator.ai%2Fpricing%2F&wanted=true)
+
