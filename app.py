@@ -138,6 +138,16 @@ def server(input, output, session):
             "number_of_npcs": int(input.new_world_npc_num()),
         }
 
+        if "text_to_image_generate_world" in input.images_to_generate():
+            game.settings.text_to_image_generate_world = True
+        else:
+            game.settings.text_to_image_generate_world = False
+
+        if "text_to_image_generate_npcs" in input.images_to_generate():
+            game.settings.text_to_image_generate_npcs = True
+        else:
+            game.settings.text_to_image_generate_npcs = False
+
         # openai.api_key = input.API_key()
         game.settings_from_ui(settings_data)
 

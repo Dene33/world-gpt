@@ -53,6 +53,7 @@ create_social_connections = load_prompt(
     "data/prompts/npc/create_social_connections_request.yaml"
 )
 npc_new_state = load_prompt("data/prompts/npc/new_state_request.yaml")
+generate_npc_image = load_prompt("data/prompts/npc/generate_npc_image.yaml")
 
 if __name__ == "__main__":
     from classes import World, Npc, Settings

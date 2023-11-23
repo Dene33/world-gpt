@@ -52,22 +52,21 @@ label {
   /* background: #555; */
 }
 
+.generated_image {
+  width: 100%;
+  float: left;
+  /* width: 20%; */
+  /* height: 25%; */
+  /* background: #555; */
+}
+
 .card,
 .well {
   background: rgba(73, 73, 73, 0.26);
 }
 
-#world_current_state {
-  height: 100%;
-  overflow: auto;
-  text-align: left;
-  overflow-x: auto; /* Use horizontal scroller if needed; for Firefox 2, not
-white-space: pre-wrap; /* css-3 */
-  white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
-  word-wrap: break-word; /* Internet Explorer 5.5+ */
-  /* margin: 0px 0px 0px 0px;
-  padding: 5px 5px 3px 5px; */
-  white-space: normal; /* crucial for IE 6, maybe 7? */
+.field-margin-left {
+  margin-left: 1rem;
 }
 
 #world_current_date,

@@ -1,0 +1,13 @@
+_type: prompt
+input_variables:
+    ["npc_name", "npc_current_state_prompt", "world_current_state_prompt", "daytime", "date", "temperature"]
+template: " \"{npc_name}\"\n
+
+  \"{npc_current_state_prompt}\"\n
+
+  \"{npc_name}\" lives in a world that can be described as: \"{world_current_state_prompt}\"\n
+
+  Time: \"{daytime}\", \"{date}\"\n
+
+  Weather: \"{temperature}\"\n
+  "

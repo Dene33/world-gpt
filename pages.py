@@ -86,7 +86,7 @@ from nearby castle.",
                     "new_world_npc_num",
                     "# NPCs",
                     [*range(1, 16)],
-                    selected=5,
+                    selected=2,
                     width="25%",
                 ),
                 "The number of NPCs in the world",
@@ -184,11 +184,26 @@ from nearby castle.",
             ui.input_password(
                 "API_key",
                 "OpenAI key",
-                placeholder="Provide your OpenAI key. Optional",
+                placeholder="Provide your OpenAI key. Now it's GPT4 + Dall-e 3 so the free version is limited to N requests per month",
                 value="",
                 width="100%",
             ),
             "Your OpenAI API key. Optional",
+        ),
+        add_tooltip(
+            ui.input_checkbox_group(
+                "images_to_generate",
+                "Choose type of images to generate:",
+                {
+                    "text_to_image_generate_world": ui.span("World"),
+                    "text_to_image_generate_npcs": ui.span("Npcs"),
+                },
+                selected=[
+                    "text_to_image_generate_world",
+                    "text_to_image_generate_npcs",
+                ],
+            ),
+            "Choose type of images to generate. It will take more time to generate the result",
         ),
         ui.div(
             ui.input_action_button(
@@ -288,42 +303,48 @@ PAGE_WORLD_INTERACT = ui.TagList(
 
 def generate_world_tab(game: Game):
     world_content = ui.TagList(
-        ui.div(
-            "World state",
-            ui.pre(
-                game.cur_world.current_state_prompt,
-                class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-            ),
-        ),
         ui.row(
             ui.column(
                 6,
+                ui.img(
+                    id="generated_image",
+                    src=game.cur_world.image_url,
+                    class_="generated_image",
+                ),
+            ),
+            ui.column(
+                6,
+                ui.div(
+                    "World state",
+                    ui.pre(
+                        game.cur_world.current_state_prompt,
+                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                    ),
+                    class_="field-margin-left",
+                ),
                 ui.div(
                     "Date",
                     ui.pre(
                         game.current_date_to_str(),
                         class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
                     ),
+                    class_="field-margin-left",
                 ),
-            ),
-            ui.column(
-                4,
                 ui.div(
                     "Time",
                     ui.pre(
                         game.current_time_to_str(),
                         class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
                     ),
+                    class_="field-margin-left",
                 ),
-            ),
-            ui.column(
-                2,
                 ui.div(
                     "C°",
                     ui.pre(
                         game.cur_world.attributes["temperature"],
                         class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
                     ),
+                    class_="field-margin-left",
                 ),
             ),
         ),
@@ -339,39 +360,48 @@ def generate_npc_tab(npc: Npc):
     npc_content = ui.TagList(
         ui.div(
             {"id": f"npc-content-{npc_value}"},
-            ui.div(
-                "Name",
-                ui.pre(
-                    npc.name,
-                    class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                ),
-            ),
-            ui.div(
-                "State",
-                ui.pre(
-                    npc.current_state_prompt,
-                    class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                ),
-            ),
             ui.row(
                 ui.column(
                     6,
+                    ui.img(
+                        id="generated_image",
+                        src=npc.image_url,
+                        class_="generated_image",
+                    ),
+                ),
+                ui.column(
+                    6,
+                    ui.div(
+                        "Name",
+                        ui.pre(
+                            npc.name,
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                        ),
+                        class_="field-margin-left",
+                    ),
+                    ui.div(
+                        "State",
+                        ui.pre(
+                            npc.current_state_prompt,
+                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
+                        ),
+                        class_="field-margin-left",
+                    ),
                     ui.div(
                         "Goal",
                         ui.pre(
                             npc.global_goal,
                             class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
                         ),
+                        class_="field-margin-left",
                     ),
-                ),
-                ui.column(
-                    6,
                     ui.div(
                         "Attributes",
                         ui.pre(
                             str(npc.attributes)[1:-1].replace(", ", ",\n"),
                             class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll npc-attributes",
                         ),
+                        class_="field-margin-left",
                     ),
                 ),
             ),
