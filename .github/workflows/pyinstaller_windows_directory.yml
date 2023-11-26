@@ -1,0 +1,19 @@
+name: Versatile PyInstaller Windows Directory
+
+on:
+  release:
+    types:
+      - released                        # When new version of your action is released
+  workflow_dispatch:                    # To run manually on any tag
+
+
+jobs:
+  pyinstaller-build:
+    runs-on: windows-latest
+    steps:
+      - name: Versatile PyInstaller Windows Directory
+        uses: sayyid5416/pyinstaller@v1
+        with:
+          python_ver: '3.10.6'
+          spec: 'build_specs/win_directory.spec'
+          requirements: 'requirements.txt'
