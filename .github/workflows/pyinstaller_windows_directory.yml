@@ -4,7 +4,12 @@ on:
   release:
     types:
       - released                        # When new version of your action is released
-  workflow_dispatch:                    # To run manually on any tag
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to use'
+        required: true
+        default: 'latest'
 
 
 jobs:
@@ -29,8 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.event.inputs.tag }}
+          release_name: Release ${{ github.event.inputs.tag }}
           body: |
             Windows Release
           draft: false
@@ -68,8 +73,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.event.inputs.tag }}
+          release_name: Release ${{ github.event.inputs.tag }}
           body: |
             Ubuntu Release
           draft: false
