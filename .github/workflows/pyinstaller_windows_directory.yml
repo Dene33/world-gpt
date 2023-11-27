@@ -18,17 +18,21 @@ on:
 
 jobs:
   createrelease:
-    id: create_release
-    uses: actions/create-release@v1
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    with:
-      tag_name: ${{ github.event.inputs.tag }}
-      release_name: Release ${{ github.event.inputs.tag }}
-      body: |
-        ${{ github.event.inputs.release_description }}
-      draft: false
-      prerelease: false
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.tag }}
+        release_name: Release ${{ github.event.inputs.tag }}
+        body: |
+          ${{ github.event.inputs.release_description }}
+        draft: false
+        prerelease: false
 
   pyinstaller-build-windows:
     runs-on: windows-latest
