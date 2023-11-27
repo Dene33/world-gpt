@@ -5,7 +5,7 @@ block_cipher = None
 import os
 from pathlib import Path
 import sys
-
+import sysconfig
 
 def get_sitepackages(sitepackages: Path):
     datas = []
