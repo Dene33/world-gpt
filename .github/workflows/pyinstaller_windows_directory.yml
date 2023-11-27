@@ -10,9 +10,26 @@ on:
         description: 'Tag to use'
         required: true
         default: 'latest'
+      release_description:
+        description: 'Release Description'
+        required: true
+        default: 'Release Description'
 
 
 jobs:
+  createrelease:
+    id: create_release
+    uses: actions/create-release@v1
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    with:
+      tag_name: ${{ github.event.inputs.tag }}
+      release_name: Release ${{ github.event.inputs.tag }}
+      body: |
+        ${{ github.event.inputs.release_description }}
+      draft: false
+      prerelease: false
+
   pyinstaller-build-windows:
     runs-on: windows-latest
     steps:
@@ -27,19 +44,6 @@ jobs:
         run: |
           cd dist
           7z a windows_dist.zip .
-
-      - name: Create Windows Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.tag }}
-          release_name: Release ${{ github.event.inputs.tag }}
-          body: |
-            Windows Release
-          draft: false
-          prerelease: false
 
       - name: Upload Release Asset
         id: upload-release-asset 
@@ -66,19 +70,6 @@ jobs:
         run: |
           cd dist
           zip -r ubuntu_dist.zip .
-
-      - name: Create Ubuntu Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.tag }}
-          release_name: Release ${{ github.event.inputs.tag }}
-          body: |
-            Ubuntu Release
-          draft: false
-          prerelease: false
 
       - name: Upload Release Asset
         id: upload-release-asset 
