@@ -1,4 +1,4 @@
-name: Versatile PyInstaller Windows Directory
+name: Versatile PyInstaller Windows and Ubuntu Directory
 
 on:
   release:
@@ -8,7 +8,7 @@ on:
 
 
 jobs:
-  pyinstaller-build:
+  pyinstaller-build-windows:
     runs-on: windows-latest
     steps:
       - name: Versatile PyInstaller Windows Directory
@@ -17,3 +17,47 @@ jobs:
           python_ver: '3.10.6'
           spec: 'build_specs/win_directory.spec'
           requirements: 'requirements.txt'
+
+      - name: Zip Windows Dist
+        run: |
+          cd dist
+          zip -r windows_dist.zip .
+
+      - name: Create Windows Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Windows Release
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pyinstaller-build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Versatile PyInstaller Ubuntu Directory
+        uses: sayyid5416/pyinstaller@v1
+        with:
+          python_ver: '3.10.6'
+          spec: 'build_specs/linux_mac_directory.spec'
+          requirements: 'requirements.txt'
+
+      - name: Zip Ubuntu Dist
+        run: |
+          cd dist
+          zip -r ubuntu_dist.zip .
+
+      - name: Create Ubuntu Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Ubuntu Release
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
