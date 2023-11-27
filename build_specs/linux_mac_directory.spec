@@ -21,78 +21,38 @@ def get_sitepackages(sitepackages: Path):
 
     return datas
 
-
-sys.path = sys.path[-3:]
-
-print(sys.path)
-
 sitepackages = Path.absolute(Path(sysconfig.get_paths()["purelib"]))
 
 sitepackages_list = get_sitepackages(sitepackages)
 
 shiny = sitepackages / "shiny"
-# shinyswatch = sitepackages / "shinyswatch"
-# yamldataclassconfig = sitepackages / "yamldataclassconfig"
-# dataclasses_json = sitepackages / "dataclasses_json"
-# marshmallow = sitepackages / "marshmallow"
 langchain = sitepackages / "langchain"
-# typing_inspect = sitepackages / "typing_inspect.py"
-# mypy_extensions = sitepackages / "mypy_extensions.py"
-# marshmallow_enum = sitepackages / "marshmallow_enum"
 www = os.path.abspath("www")
 data = os.path.abspath("data")
 
 data_files = [
-    ("app.py", "."),
-    ("validators.py", "."),
-    ("utils.py", "."),
-    ("settings.yaml", "."),
-    ("resources_paths.py", "."),
-    ("prompts.py", "."),
-    ("pages.py", "."),
-    ("LICENSE.md", "."),
-    ("classes.py", "."),
-    ("__init__.py", "."),
+    ("../app.py", "."),
+    ("../validators.py", "."),
+    ("../utils.py", "."),
+    ("../settings.yaml", "."),
+    ("../resources_paths.py", "."),
+    ("../prompts.py", "."),
+    ("../pages.py", "."),
+    ("../LICENSE.md", "."),
+    ("../classes.py", "."),
+    ("../__init__.py", "."),
     (data, "./data"),
     (www, "./www"),
-    # (langchain, "./langchain"),
-    # (shiny, "./shiny"),
 ]
 
 datas = data_files + sitepackages_list
 
 
-# print(datas)
-
 a = Analysis(
-    ["story_generator.py"],
+    ["../story_generator.py"],
     pathex=[sitepackages],
     binaries=[],
     datas=datas,
-    # datas=[
-    #     ("app.py", "."),
-    #     ("validators.py", "."),
-    #     ("utils.py", "."),
-    #     ("settings.yaml", "."),
-    #     ("resources_paths.py", "."),
-    #     ("prompts.py", "."),
-    #     ("pages.py", "."),
-    #     ("LICENSE.md", "."),
-    #     ("classes.py", "."),
-    #     ("__init__.py", "."),
-    #     ("data", "data"),
-    #     ("www", "www"),
-    #     # (sitepackages, "site-packages"),
-    #     (langchain, "./langchain"),
-    #     (shiny, "./shiny"),
-    #     (shinyswatch, "./shinyswatch"),
-    #     (yamldataclassconfig, "./yamldataclassconfig"),
-    #     (dataclasses_json, "./dataclasses_json"),
-    #     (marshmallow, "./marshmallow"),
-    #     (typing_inspect, "."),
-    #     (mypy_extensions, "."),
-    #     (marshmallow_enum, "./marshmallow_enum"),
-    # ],
     hiddenimports=[
         "shiny",
         "shinyswatch",

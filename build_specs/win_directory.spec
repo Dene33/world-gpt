@@ -25,8 +25,6 @@ sitepackages = Path.absolute(Path(sysconfig.get_paths()["purelib"]))
 
 sitepackages_list = get_sitepackages(sitepackages)
 
-print(sitepackages_list)
-
 shiny = sitepackages / "shiny"
 langchain = sitepackages / "langchain"
 www = os.path.abspath("www")
@@ -49,8 +47,6 @@ data_files = [
 
 datas = data_files + sitepackages_list
 
-current_path = os.getcwd()
-print(current_path)
 
 a = Analysis(
     ["../story_generator.py"],
