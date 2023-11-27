@@ -21,7 +21,7 @@ jobs:
       - name: Zip Windows Dist
         run: |
           cd dist
-          zip -r windows_dist.zip .
+          7z a windows_dist.zip .
 
       - name: Create Windows Release
         uses: actions/create-release@v1
