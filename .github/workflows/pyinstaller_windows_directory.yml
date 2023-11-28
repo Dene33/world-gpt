@@ -40,47 +40,27 @@ jobs:
       with:
         name: release_url
         path: release_url.txt
-
-  pyinstaller-build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Versatile PyInstaller Windows Directory
-        uses: sayyid5416/pyinstaller@v1
-        with:
-          python_ver: '3.10.6'
-          spec: 'build_specs/linux_mac_win_directory.spec'
-          requirements: 'requirements.txt'
-
-      - name: Zip Windows Dist
-        run: |
-          cd dist
-          7z a windows_dist.zip .
-
-      - name: Load Release URL File from release job
-        uses: actions/download-artifact@v1
-        with:
-          name: release_url
-
-      - name: Get Release File Name & Upload URL
-        id: get_release_info
-        shell: bash
-        run: |
-          value=`cat release_url/release_url.txt`
-          echo ::set-output name=upload_url::$value
-
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-          asset_path: ./dist/windows_dist.zip
-          asset_name: windows_dist.zip
-          asset_content_type: application/zip
-
-  pyinstaller-build-ubuntu:
-    runs-on: ubuntu-latest
+  build:
+    name: Build packages
+    needs: createrelease
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            TARGET: ubuntu
+            CMD_ZIP: |
+              cd dist
+              zip -r ubuntu_dist.zip .
+            OUT_FILE_NAME: ubuntu_dist.zip
+            ASSET_MIME: application/zip
+          - os: windows-latest
+            TARGET: windows
+            CMD_ZIP: |
+              cd dist
+              7z a windows_dist.zip .
+            OUT_FILE_NAME: windows_dist.zip
+            ASSET_MIME: application/zip
     steps:
       - name: Versatile PyInstaller Ubuntu Directory
         uses: sayyid5416/pyinstaller@v1
@@ -88,24 +68,18 @@ jobs:
           python_ver: '3.10.6'
           spec: 'build_specs/linux_mac_win_directory.spec'
           requirements: 'requirements.txt'
-
-      - name: Zip Ubuntu Dist
-        run: |
-          cd dist
-          zip -r ubuntu_dist.zip .
-
+      - name: Zip Dist
+        run: ${{ matrix.CMD_ZIP }}
       - name: Load Release URL File from release job
         uses: actions/download-artifact@v1
         with:
           name: release_url
-
       - name: Get Release File Name & Upload URL
         id: get_release_info
         shell: bash
         run: |
           value=`cat release_url/release_url.txt`
           echo ::set-output name=upload_url::$value
-
       - name: Upload Release Asset
         id: upload-release-asset 
         uses: actions/upload-release-asset@v1
@@ -113,6 +87,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-          asset_path: ./dist/ubuntu_dist.zip
-          asset_name: ubuntu_dist.zip
-          asset_content_type: application/zip
+          asset_path: ./dist/${{ matrix.OUT_FILE_NAME}}
+          asset_name: ${{ matrix.OUT_FILE_NAME}}
+          asset_content_type: ${{ matrix.ASSET_MIME}}
