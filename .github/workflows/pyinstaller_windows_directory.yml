@@ -48,7 +48,7 @@ jobs:
         uses: sayyid5416/pyinstaller@v1
         with:
           python_ver: '3.10.6'
-          spec: 'build_specs/win_directory.spec'
+          spec: 'build_specs/linux_mac_win_directory.spec'
           requirements: 'requirements.txt'
 
       - name: Zip Windows Dist
@@ -86,7 +86,7 @@ jobs:
         uses: sayyid5416/pyinstaller@v1
         with:
           python_ver: '3.10.6'
-          spec: 'build_specs/linux_mac_directory.spec'
+          spec: 'build_specs/linux_mac_win_directory.spec'
           requirements: 'requirements.txt'
 
       - name: Zip Ubuntu Dist
