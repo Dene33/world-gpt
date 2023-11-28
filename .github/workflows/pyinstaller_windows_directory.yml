@@ -4,60 +4,93 @@ on:
   release:
     types:
       - released                        # When new version of your action is released
-  workflow_dispatch:                    # To run manually on any tag
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to use'
+        required: true
+        default: 'latest'
+      release_description:
+        description: 'Release Description'
+        required: true
+        default: 'Release Description'
 
 
 jobs:
-  pyinstaller-build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Versatile PyInstaller Windows Directory
-        uses: sayyid5416/pyinstaller@v1
-        with:
-          python_ver: '3.10.6'
-          spec: 'build_specs/win_directory.spec'
-          requirements: 'requirements.txt'
-
-      - name: Zip Windows Dist
-        run: |
-          cd dist
-          zip -r windows_dist.zip .
-
-      - name: Create Windows Release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            Windows Release
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  pyinstaller-build-ubuntu:
+  createrelease:
+    name: Create Release
     runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.tag }}
+        release_name: Release ${{ github.event.inputs.tag }}
+        body: |
+          ${{ github.event.inputs.release_description }}
+        draft: false
+        prerelease: false
+    - name: Output Release URL File
+      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+    - name: Save Release URL File for publish
+      uses: actions/upload-artifact@v1
+      with:
+        name: release_url
+        path: release_url.txt
+  build:
+    name: Build packages
+    needs: createrelease
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            CMD_ZIP: |
+              cd dist
+              zip -r ubuntu_dist.zip .
+            OUT_FILE_NAME: ubuntu_dist.zip
+            ASSET_MIME: application/zip
+          - os: windows-latest
+            CMD_ZIP: |
+              cd dist
+              7z a windows_dist.zip .
+            OUT_FILE_NAME: windows_dist.zip
+            ASSET_MIME: application/zip
+          - os: macos-latest
+            CMD_ZIP: |
+              cd dist
+              zip -r mac_dist.zip .
+            OUT_FILE_NAME: mac_dist.zip
+            ASSET_MIME: application/zip
     steps:
       - name: Versatile PyInstaller Ubuntu Directory
         uses: sayyid5416/pyinstaller@v1
         with:
           python_ver: '3.10.6'
-          spec: 'build_specs/linux_mac_directory.spec'
+          spec: 'build_specs/linux_mac_win_directory.spec'
           requirements: 'requirements.txt'
-
-      - name: Zip Ubuntu Dist
-        run: |
-          cd dist
-          zip -r ubuntu_dist.zip .
-
-      - name: Create Ubuntu Release
-        uses: actions/create-release@v1
+      - name: Zip Dist
+        run: ${{ matrix.CMD_ZIP }}
+      - name: Load Release URL File from release job
+        uses: actions/download-artifact@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            Ubuntu Release
-          draft: false
-          prerelease: false
+          name: release_url
+      - name: Get Release File Name & Upload URL
+        id: get_release_info
+        shell: bash
+        run: |
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=upload_url::$value
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+          asset_path: ./dist/${{ matrix.OUT_FILE_NAME}}
+          asset_name: ${{ matrix.OUT_FILE_NAME}}
+          asset_content_type: ${{ matrix.ASSET_MIME}}
