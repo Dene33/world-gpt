@@ -1,4 +1,4 @@
-name: Versatile PyInstaller Windows and Ubuntu Directory
+name: Versatile PyInstaller Windows, Ubuntu, Mac Directory
 
 on:
   release:
