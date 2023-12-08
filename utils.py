@@ -1,3 +1,4 @@
+import asyncio
 from enum import auto
 from strenum import StrEnum
 from pathlib import Path
@@ -11,6 +12,9 @@ from dataclasses import fields
 import typing
 import logging
 from logging import debug
+import aiofiles
+import base64
+import aiohttp
 
 
 class bcolors:
@@ -243,8 +247,9 @@ async def request_openai(
                     n=params['img_n'],
                 )
 
-                processed_response = response.data[0].url
-                debug(processed_response)
+                processed_response = response
+                if verbose:
+                    debug(processed_response)
 
         except Exception as e:
             processed_response = None
@@ -502,6 +507,63 @@ class YamlDumperDoubleQuotes(yaml.Dumper):
         if value == "":
             style = '"'
         return super().represent_scalar(tag, value, style)
+
+
+async def save_img_from_url(file_path: Path, image_url: str) -> None:
+    """Save image from url"""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(image_url) as resp:
+            image_data = await resp.read()
+            async with aiofiles.open(file_path, "wb") as file:
+                await file.write(image_data)
+
+async def base64str_to_img(file_path: Path, image_data: str) -> None:
+    """Save image from base64 string"""
+    image = base64.b64decode(image_data)
+
+    async with aiofiles.open(file_path, "wb") as file:
+        await file.write(image)
+
+
+async def generate_and_save_image(file_path: Path, prompt: str, **kwargs) -> str:
+    response = await request_openai(
+        model=kwargs["model_name"],
+        prompt=prompt,
+        tries_num=kwargs["tries_num"],
+        response_processors=kwargs["response_processors"],
+        verbose=kwargs["verbose"],
+        api_key=kwargs["API_key"],
+        model_type="image",
+        img_size=kwargs["img_size"],
+        img_quality=kwargs["img_quality"],
+        img_n=kwargs["img_n"],
+    )
+
+    await save_img_from_url(file_path, response.data[0].url)
+    return response.data[0].url
+
+async def batch_image_generation(file_paths: typing.List[str],
+                                 img_prompts: str,
+                                 openai_kwargs: dict) -> typing.List[str]:
+    """Generate images from prompts and save them to files in parallel
+
+    Args:
+        file_paths (typing.List[str]): List of file paths to save images to
+        img_prompts (str): Prompt for each image generation
+        openai_kwargs (typing.List[dict]): List of kwargs for each image generation
+
+    Returns:
+        List[str]: List of generated image URLs
+
+    """
+    tasks = []
+
+    for file_path, img_prompt in zip(file_paths, img_prompts):
+        tasks.append(generate_and_save_image(file_path, img_prompt, **openai_kwargs))
+
+    generated_image_urls = await asyncio.gather(*tasks)
+
+    return generated_image_urls
 
 
 if __name__ == "__main__":
