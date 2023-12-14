@@ -1,7 +1,7 @@
 from shiny import App, render, ui, reactive
 import shinyswatch
 from classes import Npc, Game
-from utils import add_tooltip
+from utils import add_tooltip, img_to_base64str
 
 PAGE_HOME = ui.TagList(
     ui.div(
@@ -291,122 +291,6 @@ PAGE_WORLD_INTERACT = ui.TagList(
             ui.output_text("world_progress_button_text"),
             width="100%",
         ),
-        # ui.input_action_button(
-        #     "change_state",
-        #     "Change state",
-        #     width="100%",
-        # ),
         class_="main-page-container col-lg-9 col-md-12 col-sm-12 col-12 mx-auto",
     )
 )
-
-
-def generate_world_tab(game: Game):
-    world_content = ui.TagList(
-        ui.row(
-            ui.column(
-                6,
-                ui.img(
-                    id="generated_image",
-                    src=game.cur_world.image_url,
-                    class_="generated_image",
-                ),
-            ),
-            ui.column(
-                6,
-                ui.div(
-                    "World state",
-                    ui.pre(
-                        game.cur_world.current_state_prompt,
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
-                    class_="field-margin-left",
-                ),
-                ui.div(
-                    "Date",
-                    ui.pre(
-                        game.current_date_to_str(),
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
-                    class_="field-margin-left",
-                ),
-                ui.div(
-                    "Time",
-                    ui.pre(
-                        game.current_time_to_str(),
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
-                    class_="field-margin-left",
-                ),
-                ui.div(
-                    "C°",
-                    ui.pre(
-                        game.cur_world.attributes["temperature"],
-                        class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                    ),
-                    class_="field-margin-left",
-                ),
-            ),
-        ),
-    )
-
-    world_tab = ui.nav("World", world_content, value="world_nav")
-
-    return world_tab
-
-
-def generate_npc_tab(npc: Npc):
-    npc_value = npc.name.lower().replace(" ", "_")
-    npc_content = ui.TagList(
-        ui.div(
-            {"id": f"npc-content-{npc_value}"},
-            ui.row(
-                ui.column(
-                    6,
-                    ui.img(
-                        id="generated_image",
-                        src=npc.image_url,
-                        class_="generated_image",
-                    ),
-                ),
-                ui.column(
-                    6,
-                    ui.div(
-                        "Name",
-                        ui.pre(
-                            npc.name,
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                        ),
-                        class_="field-margin-left",
-                    ),
-                    ui.div(
-                        "State",
-                        ui.pre(
-                            npc.current_state_prompt,
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                        ),
-                        class_="field-margin-left",
-                    ),
-                    ui.div(
-                        "Goal",
-                        ui.pre(
-                            npc.global_goal,
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll",
-                        ),
-                        class_="field-margin-left",
-                    ),
-                    ui.div(
-                        "Attributes",
-                        ui.pre(
-                            str(npc.attributes)[1:-1].replace(", ", ",\n"),
-                            class_="shiny-text-output noplaceholder shiny-bound-output text-no-scroll npc-attributes",
-                        ),
-                        class_="field-margin-left",
-                    ),
-                ),
-            ),
-        )
-    )
-
-    npc_tab = ui.nav(npc.name, npc_content, value=npc_value)
-    return npc_tab

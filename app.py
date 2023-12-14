@@ -3,26 +3,20 @@ from shiny import App, render, ui, reactive
 import shinyswatch
 from classes import Settings, Game
 from pathlib import Path
-from utils import Input, ensure_dirs_exist, request_openai  # , debug
+from utils import ensure_dirs_exist
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import uuid
-import openai
 import asyncio
-import time
 from pages import (
     PAGE_HOME,
     PAGE_WORLD_CREATE,
     PAGE_WORLD_LOADING,
     PAGE_WORLD_INTERACT,
     PAGE_WORLD_UPDATING,
-    generate_world_tab,
-    generate_npc_tab,
 )
-from shiny.types import ImgData
 from operator import attrgetter
-import random
-from copy import copy, deepcopy
 import logging
+from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, image_render
 
 from logging import debug
 from dotenv import load_dotenv
@@ -31,7 +25,9 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.DEBUG)
 
 # Uncomment to disable logging and comment to enable logging
-logging.disable(logging.DEBUG)
+# logging.disable(logging.DEBUG)
+
+www_dir = Path(__file__).parent / "www"
 
 app_ui = ui.page_fluid(
     {"id": "app-content"},
@@ -41,17 +37,6 @@ app_ui = ui.page_fluid(
         ui.tags.script(src="js/iframeResizer.contentWindow.min.js"),
     ),
     ui.tags.body(
-        # ui.input_select(
-        #     "page_select",
-        #     "Select page",
-        #     [
-        #         "page_home",
-        #         "page_world_create",
-        #         "page_world_loading",
-        #         "page_world_interact",
-        #         "page_world_updating",
-        #     ],
-        # ),
         ui.navset_hidden(
             # ui.nav("Home page", PAGE_HOME, value="page_home"),
             ui.nav("Create a new world", PAGE_WORLD_CREATE, value="page_world_create"),
@@ -75,31 +60,17 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     progress_task_val = reactive.Value(None)
 
-    @reactive.Effect
-    def _():
-        ui.update_navs("pages", selected=str(input.page_select()))
-
-    @reactive.Effect
-    @reactive.event(input.to_page_world_create)
-    def _():
-        ui.update_navs("pages", selected="page_world_create")
-
+    # Switch page to page_world_loading for the time of the world generation
     @reactive.Effect
     @reactive.event(input.to_page_world_loading)
     async def _():
+        # World generation running in the background
         game_task = await generate_world()
+
+        # Switch to page_world_loading with a spinning loading icon while the world is generating
         ui.update_navs("pages", selected="page_world_loading")
 
-    @reactive.Effect
-    @reactive.event(input.to_page_world_updating)
-    async def _():
-        debug("Update the world")
-        game_task = await generate_world()
-        game = game_task.result()
-        progress_task = progress_task_val.set(await progress_world(game))
-        debug("to_page_world_updating", progress_task)
-        ui.update_navs("pages", selected="page_world_updating")
-
+    # Asyncronously generate a new world
     @reactive.Calc
     async def generate_world():
         ensure_dirs_exist(
@@ -155,6 +126,103 @@ def server(input, output, session):
 
         return game_task
 
+    # Every 3 seconds check if @reactive.Calc function `generate_world` is finished.
+    # If not, continue checking every 3 seconds.
+    # If it is finished, update the UI and switch to page_world_interact
+    @output
+    @render.text
+    async def loading_world_header_text():
+        game_task = await generate_world()
+        if game_task.done():
+            debug("invalidate_done")
+            ui.update_navs("pages", selected="page_world_interact")
+            game = game_task.result()
+            world_uuid = uuid.uuid4().hex
+            if game.settings.text_to_image_generate_world:
+                img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
+            else:
+                img_url = www_dir / "img/img_placeholder.png"
+            image_render(world_uuid, img_url)
+            world_nav = generate_world_tab(world_uuid, game, "world_nav")
+            ui.nav_insert(
+                "world_interact_tabs",
+                world_nav,
+                target="npcs_nav_menu",
+                position="before",
+            )
+
+            ui.nav_hide("world_interact_tabs", "npc_placeholder")
+            npcs = game.npcs
+            for i, npc in enumerate(reversed(npcs)):
+                npc_uuid = uuid.uuid4().hex
+                if game.settings.text_to_image_generate_npcs:
+                    img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
+                else:
+                    img_url = www_dir / "img/img_placeholder.png"
+                image_render(npc_uuid, img_url)
+                npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
+                ui.nav_insert(
+                    "world_interact_tabs",
+                    npc_nav,
+                    target="npc_placeholder",
+                    position="after",
+                )
+            # ui.nav_remove("world_interact_tabs", "npc_placeholder")
+            ui.update_navs("world_interact_tabs", selected="world_nav")
+        else:
+            reactive.invalidate_later(3)
+            debug("invalidate_loading")
+            return "World is initializing..."
+
+    # Display the world name in the header through async def get_world_data(attribute)
+    @output
+    @render.text
+    async def world_interact_header():
+        return await get_world_data("cur_world.name")
+    
+    # Get any world data attribute when the @reactive.Calc function `generate_world` is finished
+    async def get_world_data(attribute):
+        game_task = await generate_world()
+        if game_task.done():
+            game = game_task.result()
+            return attrgetter(attribute)(game)
+        else:
+            reactive.invalidate_later(3)
+            return "Loading..."
+
+    # Display the World's tick rate and tick type in the button text
+    @output
+    @render.text
+    async def world_progress_button_text():
+        tick_rate = await get_world_data("cur_world.tick_rate")
+        tick_type = await get_world_data("cur_world.tick_type")
+        return f"Wait {tick_rate} {tick_type}s"
+
+    # Assign async task spawned with `async def progress_world(game: Game)` to Reactive.Value `progress_task_val`
+    # Switch to page_world_updating with a spinning loading icon while the world is updating
+    @reactive.Effect
+    @reactive.event(input.to_page_world_updating)
+    async def _():
+        debug("Update the world")
+        game_task = await generate_world()
+        game = game_task.result()
+
+        # Set Reactive.Value `progress_task_val` to the result (async task) of `progress_world` function
+        progress_task = progress_task_val.set(await progress_world(game))
+        debug("to_page_world_updating", progress_task)
+
+        # Switch to page_world_updating with a spinning loading icon while the world is updating
+        ui.update_navs("pages", selected="page_world_updating")
+
+    # Spawn the world update async task in the background
+    async def progress_world(game: Game):
+        progress_task = asyncio.create_task(game.progress_world())
+        debug("calc progress task", progress_task)
+        return progress_task
+
+    # Every 3 seconds check if the game.progress_world() task stored in Reactive.Value `progress_task_val` is finished.
+    # If not, continue checking every 3 seconds.
+    # If it is finished, update the UI and switch to page_world_interact
     @output
     @render.text
     # @reactive.Calc
@@ -166,7 +234,13 @@ def server(input, output, session):
             game = progress_task.result()
             progress_task = None
             ui.update_navs("pages", selected="page_world_interact")
-            world_nav = generate_world_tab(game)
+            world_uuid = uuid.uuid4().hex
+            if game.settings.text_to_image_generate_world:
+                img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
+            else:
+                img_url = www_dir / "img/img_placeholder.png"
+            image_render(world_uuid, img_url)
+            world_nav = generate_world_tab(world_uuid, game, "world_nav")
             ui.nav_remove("world_interact_tabs", "world_nav")
             ui.nav_insert(
                 "world_interact_tabs",
@@ -174,9 +248,16 @@ def server(input, output, session):
                 target="npcs_nav_menu",
                 position="before",
             )
+            
             npcs = game.npcs
-            for npc in reversed(npcs):
-                npc_nav = generate_npc_tab(npc)
+            for i, npc in enumerate(reversed(npcs)):
+                npc_uuid = uuid.uuid4().hex
+                if game.settings.text_to_image_generate_npcs:
+                    img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
+                else:
+                    img_url = www_dir / "img/img_placeholder.png"
+                image_render(npc_uuid, img_url)
+                npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
 
                 ui.nav_remove("world_interact_tabs", npc.name.lower().replace(" ", "_"))
                 ui.nav_insert(
@@ -194,114 +275,5 @@ def server(input, output, session):
             debug("invalidate_loading")
             return "Updating the world..."
 
-    # @reactive.Calc
-    async def progress_world(game: Game):
-        progress_task = asyncio.create_task(game.progress_world())
-        debug("calc progress task", progress_task)
-        return progress_task
 
-    # @reactive.Effect
-    # @reactive.event(input.check_world)
-    # async def _():
-    #     game_task = await generate_world()
-    #     if game_task.done():
-    #         npcs = game_task.result().npcs
-    #         for npc in reversed(npcs):
-    #             npc_value = npc.name.lower().replace(" ", "_")
-    #             npc_nav = ui.nav(npc.name, "NPC placeholder NEW", value=npc_value)
-    #             ui.nav_insert(
-    #                 "world_interact_tabs",
-    #                 npc_nav,
-    #                 target="npc_placeholder",
-    #                 position="after",
-    #             )
-    #         ui.nav_remove("world_interact_tabs", "npc_placeholder")
-    #     else:
-    #         reactive.invalidate_later(3)
-
-    @reactive.Effect
-    @reactive.event(input.world_progress_button)
-    async def _():
-        await progress_world()
-
-    @output
-    @render.text
-    async def loading_world_header_text():
-        game_task = await generate_world()
-        if game_task.done():
-            debug("invalidate_done")
-            ui.update_navs("pages", selected="page_world_interact")
-            game = game_task.result()
-            world_nav = generate_world_tab(game)
-            ui.nav_insert(
-                "world_interact_tabs",
-                world_nav,
-                target="npcs_nav_menu",
-                position="before",
-            )
-
-            ui.nav_hide("world_interact_tabs", "npc_placeholder")
-            npcs = game.npcs
-            for npc in reversed(npcs):
-                npc_nav = generate_npc_tab(npc)
-                # npc_nav = ui.nav(npc.name, npc_content, value=npc_value)
-                ui.nav_insert(
-                    "world_interact_tabs",
-                    npc_nav,
-                    target="npc_placeholder",
-                    position="after",
-                )
-            # ui.nav_remove("world_interact_tabs", "npc_placeholder")
-            ui.update_navs("world_interact_tabs", selected="world_nav")
-        else:
-            reactive.invalidate_later(3)
-            debug("invalidate_loading")
-            return "World is initializing..."
-
-    async def get_world_data(attribute):
-        game_task = await generate_world()
-        if game_task.done():
-            game = game_task.result()
-            return attrgetter(attribute)(game)
-        else:
-            reactive.invalidate_later(3)
-            return "Loading..."
-
-    @output
-    @render.text
-    async def world_interact_header():
-        return await get_world_data("cur_world.name")
-
-    # @output
-    # @render.text
-    # async def world_current_state():
-    #     return await get_world_data("cur_world.current_state_prompt")
-
-    # @output
-    # @render.text
-    # async def world_current_date():
-    #     current_date_to_str_func = await get_world_data("current_date_to_str")
-    #     return current_date_to_str_func()
-
-    # @output
-    # @render.text
-    # async def world_current_time():
-    #     current_time_to_str_func = await get_world_data("current_time_to_str")
-    #     return current_time_to_str_func()
-
-    # @output
-    # @render.text
-    # async def world_current_temperature():
-    #     attributes = await get_world_data("cur_world.attributes")
-    #     return attributes["temperature"]
-
-    @output
-    @render.text
-    async def world_progress_button_text():
-        tick_rate = await get_world_data("cur_world.tick_rate")
-        tick_type = await get_world_data("cur_world.tick_type")
-        return f"Wait {tick_rate} {tick_type}s"
-
-
-www_dir = Path(__file__).parent / "www"
 app = App(app_ui, server, static_assets=www_dir)

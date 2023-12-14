@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass, field
 from yamldataclassconfig.config import YamlDataClassConfig
 from pathlib import Path
@@ -25,7 +26,9 @@ from utils import (
     is_year_leap,
     check_yaml_update_npc,
     check_yaml_new_npc,
-    hour_to_daytime
+    hour_to_daytime,
+    base64str_to_img,
+    batch_image_generation,
     # debug,
 )
 import validators
@@ -80,7 +83,6 @@ class World(YamlDataClassConfig):
     tick_rate: int = 0  # how much time of tick_type passes in the world per tick
     current_tick: int = 0  # indicates how many ticks passed
     current_state_prompt: str = ""
-    image_url: str = ""
 
 
 @dataclass
@@ -90,7 +92,6 @@ class Npc(YamlDataClassConfig):
     attributes: dict[str, Any] = field(default_factory=dict)
     social_connections: list[str] = field(default_factory=list)
     current_state_prompt: str = ""
-    image_url: str = ""
 
 
 class Game:
@@ -178,6 +179,9 @@ class Game:
         await self.update_world()
         await self.update_npcs()
 
+        if self.settings.text_to_image_model:
+            await self.generate_images()
+
         self.save_world()
         self.save_npcs()
 
@@ -207,23 +211,6 @@ class Game:
 
         self.cur_world.current_state_prompt = new_world_state["world_new_state"]
 
-        if self.settings.text_to_image_model and self.settings.text_to_image_generate_world:
-            world_image_link = await request_openai(
-                model=self.settings.text_to_image_model,
-                prompt=self.cur_world.current_state_prompt,
-                tries_num=self.settings.llm_request_tries_num,
-                response_processors=[],
-                verbose=self.settings.openai_verbose,
-                api_key=self.settings.API_key,
-                model_type="image",
-                img_size=self.settings.text_to_image_size,
-                img_quality=self.settings.text_to_image_quality,
-                img_n=self.settings.text_to_image_n,
-            )
-
-            self.cur_world.image_url = world_image_link
-
-            debug(world_image_link)
 
         for attribute_key in self.cur_world.attributes.keys():
             new_attribute_value = new_world_state["attributes"].get(attribute_key, None)
@@ -280,32 +267,6 @@ class Game:
             current_npc.attributes[attribute_key] += new_attribute_value
         # current_npc.attributes = npc_new_data["attributes"].copy()
 
-        if self.settings.text_to_image_model and self.settings.text_to_image_generate_npcs:
-            npc_image_prompt = generate_npc_image.format(
-                npc_name=current_npc.name,
-                npc_current_state_prompt=current_npc.current_state_prompt,
-                world_current_state_prompt=self.cur_world.current_state_prompt,
-                daytime=hour_to_daytime(self.cur_world.time["current_hour"]),
-                date=self.current_date_to_str(),
-                temperature=self.cur_world.attributes["temperature"],
-            )
-                
-            npc_image_link = await request_openai(
-                model=self.settings.text_to_image_model,
-                prompt=npc_image_prompt,
-                tries_num=self.settings.llm_request_tries_num,
-                response_processors=[],
-                verbose=self.settings.openai_verbose,
-                api_key=self.settings.API_key,
-                model_type="image",
-                img_size=self.settings.text_to_image_size,
-                img_quality=self.settings.text_to_image_quality,
-                img_n=self.settings.text_to_image_n,
-            )
-
-            current_npc.image_url = npc_image_link
-
-            debug(npc_image_link)
 
         return
 
@@ -434,6 +395,9 @@ class Game:
             await self.new_npcs()
             await self.new_npcs_social_connections()
 
+            if self.settings.text_to_image_model:
+                await self.generate_images()
+
         # Load World
         elif new_or_load.lower() in ["l", "load"]:
             self.load_world()
@@ -487,23 +451,6 @@ class Game:
 
         self.world_general_description = self.cur_world.current_state_prompt
 
-        if self.settings.text_to_image_model and self.settings.text_to_image_generate_world:
-            world_image_link = await request_openai(
-                model=self.settings.text_to_image_model,
-                prompt=self.cur_world.current_state_prompt,
-                tries_num=self.settings.llm_request_tries_num,
-                response_processors=[],
-                verbose=self.settings.openai_verbose,
-                api_key=self.settings.API_key,
-                model_type="image",
-                img_size=self.settings.text_to_image_size,
-                img_quality=self.settings.text_to_image_quality,
-                img_n=self.settings.text_to_image_n,
-            )
-
-            self.cur_world.image_url = world_image_link
-
-            debug(world_image_link)
 
         self.save_world()
 
@@ -729,32 +676,6 @@ class Game:
                 api_key=self.settings.API_key,
             )
 
-            if self.settings.text_to_image_model and self.settings.text_to_image_generate_npcs:
-                npc_image_prompt = generate_npc_image.format(
-                    npc_name=new_npc_data["name"],
-                    npc_current_state_prompt=new_npc_data["current_state_prompt"],
-                    world_current_state_prompt=self.cur_world.current_state_prompt,
-                    daytime=hour_to_daytime(self.cur_world.time["current_hour"]),
-                    date=self.current_date_to_str(),
-                    temperature=self.cur_world.attributes["temperature"],
-                )
-                    
-                npc_image_link = await request_openai(
-                    model=self.settings.text_to_image_model,
-                    prompt=npc_image_prompt,
-                    tries_num=self.settings.llm_request_tries_num,
-                    response_processors=[],
-                    verbose=self.settings.openai_verbose,
-                    api_key=self.settings.API_key,
-                    model_type="image",
-                    img_size=self.settings.text_to_image_size,
-                    img_quality=self.settings.text_to_image_quality,
-                    img_n=self.settings.text_to_image_n,
-                )
-
-                new_npc_data["image_url"] = npc_image_link
-
-                debug(npc_image_link)
 
             self.save_npc(new_npc_data)
             new_npc_yaml_path = (
@@ -988,6 +909,46 @@ class Game:
     def quit_game(self):
         debug(f"{bcolors.OKCYAN}Quitting game...{bcolors.ENDC}")
         sys.exit(0)
+
+    async def generate_images(self):
+        # In Shiny there is no way to read images from arbitrary file sysytem path (only predefined >public< one)
+        # So we display images from returned openai urls instead
+        # Nevertheless images are saved for the future use locally (there will be no way to display them for now though)
+        image_paths = []
+        img_prompts = []
+
+        if self.settings.text_to_image_generate_world:
+            image_paths.append(str(self.cur_world_path / f"world_tick_{self.cur_world.current_tick}.jpg"))
+            img_prompts.append(self.cur_world.current_state_prompt)
+
+        if self.settings.text_to_image_generate_npcs:
+            for npc in self.npcs:
+                npc_image_prompt = generate_npc_image.format(
+                    npc_name=npc.name,
+                    npc_current_state_prompt=npc.current_state_prompt,
+                    world_current_state_prompt=self.cur_world.current_state_prompt,
+                    daytime=hour_to_daytime(self.cur_world.time["current_hour"]),
+                    date=self.current_date_to_str(),
+                    temperature=self.cur_world.attributes["temperature"],
+                )
+                
+                image_paths.append(str(self.cur_npcs_path / npc.name / f"npc_tick_{self.cur_world.current_tick}.jpg"))
+                img_prompts.append(npc_image_prompt)
+
+        openai_kwargs = {
+            "model_name": self.settings.text_to_image_model,
+            "tries_num": self.settings.llm_request_tries_num,
+            "response_processors": [],
+            "verbose": self.settings.openai_verbose,
+            "API_key": self.settings.API_key,
+            "model_type": "image",
+            "img_size": self.settings.text_to_image_size,
+            "img_quality": self.settings.text_to_image_quality,
+            "img_n": self.settings.text_to_image_n,
+            "response_format": "b64_json"
+        }
+
+        await batch_image_generation(image_paths, img_prompts, openai_kwargs)
 
 
 if __name__ == "__main__":

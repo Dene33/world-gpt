@@ -1,7 +1,7 @@
 LLM_model: 'gpt-4-1106-preview'
 text_to_image_model: 'dall-e-3'
 text_to_image_size: "1024x1024"
-text_to_image_quality: "hd"
+text_to_image_quality: "standard"
 text_to_image_n: 1
 text_to_image_generate_world: true
 text_to_image_generate_npcs: true
