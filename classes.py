@@ -83,7 +83,6 @@ class World(YamlDataClassConfig):
     tick_rate: int = 0  # how much time of tick_type passes in the world per tick
     current_tick: int = 0  # indicates how many ticks passed
     current_state_prompt: str = ""
-    image_url: str = ""
 
 
 @dataclass
@@ -93,7 +92,6 @@ class Npc(YamlDataClassConfig):
     attributes: dict[str, Any] = field(default_factory=dict)
     social_connections: list[str] = field(default_factory=list)
     current_state_prompt: str = ""
-    image_url: str = ""
 
 
 class Game:
@@ -181,7 +179,7 @@ class Game:
         await self.update_world()
         await self.update_npcs()
 
-        if self.settings.text_to_image_model and self.settings.text_to_image_generate_world:
+        if self.settings.text_to_image_model:
             await self.generate_images()
 
         self.save_world()
@@ -397,7 +395,7 @@ class Game:
             await self.new_npcs()
             await self.new_npcs_social_connections()
 
-            if self.settings.text_to_image_model and self.settings.text_to_image_generate_world:
+            if self.settings.text_to_image_model:
                 await self.generate_images()
 
         # Load World
@@ -919,20 +917,23 @@ class Game:
         image_paths = []
         img_prompts = []
 
-        image_paths.append(str(self.cur_world_path / f"world_tick_{self.cur_world.current_tick}.jpg"))
-        img_prompts.append(self.cur_world.current_state_prompt)
-        for npc in self.npcs:
-            npc_image_prompt = generate_npc_image.format(
-                npc_name=npc.name,
-                npc_current_state_prompt=npc.current_state_prompt,
-                world_current_state_prompt=self.cur_world.current_state_prompt,
-                daytime=hour_to_daytime(self.cur_world.time["current_hour"]),
-                date=self.current_date_to_str(),
-                temperature=self.cur_world.attributes["temperature"],
-            )
+        if self.settings.text_to_image_generate_world:
+            image_paths.append(str(self.cur_world_path / f"world_tick_{self.cur_world.current_tick}.jpg"))
+            img_prompts.append(self.cur_world.current_state_prompt)
 
-            img_prompts.append(npc_image_prompt)
-            image_paths.append(str(self.cur_npcs_path / npc.name / f"npc_tick_{self.cur_world.current_tick}.jpg"))
+        if self.settings.text_to_image_generate_npcs:
+            for npc in self.npcs:
+                npc_image_prompt = generate_npc_image.format(
+                    npc_name=npc.name,
+                    npc_current_state_prompt=npc.current_state_prompt,
+                    world_current_state_prompt=self.cur_world.current_state_prompt,
+                    daytime=hour_to_daytime(self.cur_world.time["current_hour"]),
+                    date=self.current_date_to_str(),
+                    temperature=self.cur_world.attributes["temperature"],
+                )
+                
+                image_paths.append(str(self.cur_npcs_path / npc.name / f"npc_tick_{self.cur_world.current_tick}.jpg"))
+                img_prompts.append(npc_image_prompt)
 
         openai_kwargs = {
             "model_name": self.settings.text_to_image_model,
@@ -944,12 +945,10 @@ class Game:
             "img_size": self.settings.text_to_image_size,
             "img_quality": self.settings.text_to_image_quality,
             "img_n": self.settings.text_to_image_n,
+            "response_format": "b64_json"
         }
 
-        img_urls = await batch_image_generation(image_paths, img_prompts, openai_kwargs)
-        self.cur_world.image_url = img_urls[0]
-        for i, npc in enumerate(self.npcs):
-            npc.image_url = img_urls[1:][i]
+        await batch_image_generation(image_paths, img_prompts, openai_kwargs)
 
 
 if __name__ == "__main__":

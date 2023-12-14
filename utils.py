@@ -245,6 +245,7 @@ async def request_openai(
                     size=params['img_size'],
                     quality=params['img_quality'],
                     n=params['img_n'],
+                    response_format=params['response_format'],
                 )
 
                 processed_response = response
@@ -524,6 +525,14 @@ async def base64str_to_img(file_path: Path, image_data: str) -> None:
     async with aiofiles.open(file_path, "wb") as file:
         await file.write(image)
 
+async def img_to_base64str(file_path: Path) -> str:
+    """Convert image file to base64 string"""
+    async with aiofiles.open(file_path, "rb") as file:
+        image_data = await file.read()
+        base64_str = base64.b64encode(image_data).decode("utf-8")
+        base64_str = "data:image/jpeg;base64," + base64_str
+        return base64_str
+
 
 async def generate_and_save_image(file_path: Path, prompt: str, **kwargs) -> str:
     response = await request_openai(
@@ -537,10 +546,10 @@ async def generate_and_save_image(file_path: Path, prompt: str, **kwargs) -> str
         img_size=kwargs["img_size"],
         img_quality=kwargs["img_quality"],
         img_n=kwargs["img_n"],
+        response_format=kwargs["response_format"],
     )
 
-    await save_img_from_url(file_path, response.data[0].url)
-    return response.data[0].url
+    await base64str_to_img(file_path, response.data[0].b64_json)
 
 async def batch_image_generation(file_paths: typing.List[str],
                                  img_prompts: str,
@@ -561,9 +570,7 @@ async def batch_image_generation(file_paths: typing.List[str],
     for file_path, img_prompt in zip(file_paths, img_prompts):
         tasks.append(generate_and_save_image(file_path, img_prompt, **openai_kwargs))
 
-    generated_image_urls = await asyncio.gather(*tasks)
-
-    return generated_image_urls
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == "__main__":

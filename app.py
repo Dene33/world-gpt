@@ -3,26 +3,20 @@ from shiny import App, render, ui, reactive
 import shinyswatch
 from classes import Settings, Game
 from pathlib import Path
-from utils import Input, ensure_dirs_exist, request_openai  # , debug
+from utils import ensure_dirs_exist
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import uuid
-import openai
 import asyncio
-import time
 from pages import (
     PAGE_HOME,
     PAGE_WORLD_CREATE,
     PAGE_WORLD_LOADING,
     PAGE_WORLD_INTERACT,
     PAGE_WORLD_UPDATING,
-    generate_world_tab,
-    generate_npc_tab,
 )
-from shiny.types import ImgData
 from operator import attrgetter
-import random
-from copy import copy, deepcopy
 import logging
+from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, image_render
 
 from logging import debug
 from dotenv import load_dotenv
@@ -31,7 +25,9 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.DEBUG)
 
 # Uncomment to disable logging and comment to enable logging
-logging.disable(logging.DEBUG)
+# logging.disable(logging.DEBUG)
+
+www_dir = Path(__file__).parent / "www"
 
 app_ui = ui.page_fluid(
     {"id": "app-content"},
@@ -141,7 +137,13 @@ def server(input, output, session):
             debug("invalidate_done")
             ui.update_navs("pages", selected="page_world_interact")
             game = game_task.result()
-            world_nav = generate_world_tab(game)
+            world_uuid = uuid.uuid4().hex
+            if game.settings.text_to_image_generate_world:
+                img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
+            else:
+                img_url = www_dir / "img/img_placeholder.png"
+            image_render(world_uuid, img_url)
+            world_nav = generate_world_tab(world_uuid, game, "world_nav")
             ui.nav_insert(
                 "world_interact_tabs",
                 world_nav,
@@ -151,9 +153,14 @@ def server(input, output, session):
 
             ui.nav_hide("world_interact_tabs", "npc_placeholder")
             npcs = game.npcs
-            for npc in reversed(npcs):
-                npc_nav = generate_npc_tab(npc)
-                # npc_nav = ui.nav(npc.name, npc_content, value=npc_value)
+            for i, npc in enumerate(reversed(npcs)):
+                npc_uuid = uuid.uuid4().hex
+                if game.settings.text_to_image_generate_npcs:
+                    img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
+                else:
+                    img_url = www_dir / "img/img_placeholder.png"
+                image_render(npc_uuid, img_url)
+                npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
                 ui.nav_insert(
                     "world_interact_tabs",
                     npc_nav,
@@ -227,7 +234,13 @@ def server(input, output, session):
             game = progress_task.result()
             progress_task = None
             ui.update_navs("pages", selected="page_world_interact")
-            world_nav = generate_world_tab(game)
+            world_uuid = uuid.uuid4().hex
+            if game.settings.text_to_image_generate_world:
+                img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
+            else:
+                img_url = www_dir / "img/img_placeholder.png"
+            image_render(world_uuid, img_url)
+            world_nav = generate_world_tab(world_uuid, game, "world_nav")
             ui.nav_remove("world_interact_tabs", "world_nav")
             ui.nav_insert(
                 "world_interact_tabs",
@@ -235,9 +248,16 @@ def server(input, output, session):
                 target="npcs_nav_menu",
                 position="before",
             )
+            
             npcs = game.npcs
-            for npc in reversed(npcs):
-                npc_nav = generate_npc_tab(npc)
+            for i, npc in enumerate(reversed(npcs)):
+                npc_uuid = uuid.uuid4().hex
+                if game.settings.text_to_image_generate_npcs:
+                    img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
+                else:
+                    img_url = www_dir / "img/img_placeholder.png"
+                image_render(npc_uuid, img_url)
+                npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
 
                 ui.nav_remove("world_interact_tabs", npc.name.lower().replace(" ", "_"))
                 ui.nav_insert(
@@ -256,5 +276,4 @@ def server(input, output, session):
             return "Updating the world..."
 
 
-www_dir = Path(__file__).parent / "www"
 app = App(app_ui, server, static_assets=www_dir)
