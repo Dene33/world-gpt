@@ -5,7 +5,6 @@ text_to_image_quality: "standard"
 text_to_image_n: 1
 text_to_image_generate_world: true
 text_to_image_generate_npcs: true
-API_key: ''
 openai_verbose: False
 llm_request_tries_num: 5 # number of tries to get a response from LLM. -1 means infinite
 npc_history_steps: 0 # number of previous npc states to store

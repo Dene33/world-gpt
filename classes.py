@@ -47,6 +47,7 @@ import openai
 import random
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import sys
+import os
 
 from logging import debug
 
@@ -60,7 +61,6 @@ class Settings(YamlDataClassConfig):
     text_to_image_n: int = 1
     text_to_image_generate_world: bool = False
     text_to_image_generate_npcs: bool = False
-    API_key: str = ""
     openai_verbose: bool = False
     llm_request_tries_num: int = -1
     npc_history_steps: int = 0
@@ -99,10 +99,6 @@ class Game:
         # Settings
         self.settings: Settings = Settings()
         self.settings.load(path="./settings.yaml")
-        # openai.api_key = self.settings.API_key
-        # openai.api_key = ""
-        # if not openai.api_key:
-        #     openai.api_key = prompt("Provide OpenAI API key: ", is_password=True)
 
         # Paths
         self.game_path: Path = ""
@@ -206,7 +202,7 @@ class Game:
             tries_num=self.settings.llm_request_tries_num,
             response_processors=[yaml_from_str],
             verbose=self.settings.openai_verbose,
-            api_key=self.settings.API_key,
+            api_key=os.environ.get("OPENAI_API_KEY"),
         )
 
         self.cur_world.current_state_prompt = new_world_state["world_new_state"]
@@ -257,7 +253,7 @@ class Game:
             tries_num=self.settings.llm_request_tries_num,
             response_processors=[yaml_from_str, check_yaml_update_npc],
             verbose=self.settings.openai_verbose,
-            api_key=self.settings.API_key,
+            api_key=os.environ.get("OPENAI_API_KEY"),
         )
 
         current_npc.current_state_prompt = npc_new_data["npc_new_state"]
@@ -673,7 +669,7 @@ class Game:
                 tries_num=self.settings.llm_request_tries_num,
                 response_processors=[yaml_from_str, check_yaml_new_npc],
                 verbose=self.settings.openai_verbose,
-                api_key=self.settings.API_key,
+                api_key=os.environ.get("OPENAI_API_KEY"),
             )
 
 
@@ -737,7 +733,7 @@ class Game:
             tries_num=self.settings.llm_request_tries_num,
             response_processors=[yaml_from_str],
             verbose=self.settings.openai_verbose,
-            api_key=self.settings.API_key,
+            api_key=os.environ.get("OPENAI_API_KEY"),
         )
 
         self.save_global_goals()
@@ -787,7 +783,7 @@ class Game:
                 tries_num=self.settings.llm_request_tries_num,
                 response_processors=[yaml_from_str],
                 verbose=self.settings.openai_verbose,
-                api_key=self.settings.API_key,
+                api_key=os.environ.get("OPENAI_API_KEY"),
             )
 
             current_npc.social_connections = npc_social_connections
@@ -940,7 +936,7 @@ class Game:
             "tries_num": self.settings.llm_request_tries_num,
             "response_processors": [],
             "verbose": self.settings.openai_verbose,
-            "API_key": self.settings.API_key,
+            "API_key": os.environ.get("OPENAI_API_KEY"),
             "model_type": "image",
             "img_size": self.settings.text_to_image_size,
             "img_quality": self.settings.text_to_image_quality,
