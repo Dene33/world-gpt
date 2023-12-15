@@ -5,7 +5,6 @@ text_to_image_quality: ""
 text_to_image_n: 1
 text_to_image_generate_world: false
 text_to_image_generate_npcs: false
-API_key: ""
 llm_request_tries_num: 5 # number of tries to get a response from LLM. -1 means infinite
 
 # name of the dir inside ./data containing `world` and `npcs` dirs. 

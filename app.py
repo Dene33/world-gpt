@@ -13,6 +13,7 @@ from pages import (
     PAGE_WORLD_LOADING,
     PAGE_WORLD_INTERACT,
     PAGE_WORLD_UPDATING,
+    PAGE_MISSING_API_KEY
 )
 from operator import attrgetter
 import logging
@@ -20,6 +21,7 @@ from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, image
 
 from logging import debug
 from dotenv import load_dotenv
+from io import StringIO
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -51,6 +53,11 @@ app_ui = ui.page_fluid(
                 PAGE_WORLD_UPDATING,
                 value="page_world_updating",
             ),
+            ui.nav(
+                "Missing API key",
+                PAGE_MISSING_API_KEY,
+                value="page_missing_api_key",
+            ),
             id="pages",
         ),
     ),
@@ -60,10 +67,25 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     progress_task_val = reactive.Value(None)
 
+    # Switch to the world creation page
+    @reactive.Effect
+    @reactive.event(input.to_page_world_create)
+    async def _():
+        ui.update_navs("pages", selected="page_world_create")
+
     # Switch page to page_world_loading for the time of the world generation
     @reactive.Effect
     @reactive.event(input.to_page_world_loading)
     async def _():
+        if input.API_key():
+            env_stream = StringIO(f"OPENAI_API_KEY={input.API_key()}")
+            load_dotenv(stream=env_stream)
+        elif Path("openai_key").exists():
+            load_dotenv("openai_key")
+        else:
+            ui.update_navs("pages", selected="page_missing_api_key")
+            return
+
         # World generation running in the background
         game_task = await generate_world()
 
@@ -99,13 +121,7 @@ def server(input, output, session):
             "current_state_prompt": input.new_world_description(),
         }
 
-        api_key = input.API_key()
-        if not api_key:
-            load_dotenv("openai_key")
-            api_key = os.environ.get("OPENAI_API_KEY")
-
         settings_data = {
-            "API_key": api_key,
             "number_of_npcs": int(input.new_world_npc_num()),
         }
 
@@ -119,7 +135,6 @@ def server(input, output, session):
         else:
             game.settings.text_to_image_generate_npcs = False
 
-        # openai.api_key = input.API_key()
         game.settings_from_ui(settings_data)
 
         game_task = asyncio.create_task(game.init_world(world_data))
