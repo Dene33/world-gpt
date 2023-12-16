@@ -41,7 +41,7 @@ Ultimately, the world's and NPC's conditions converge to create an exceptional s
 1. ~~Text-to-image generation~~
 2. Generate the full story from the whole world's and NPCs' progress
 3. Allow user to manually adjust the world's and NPCs' state on the fly
-4. Save/load
+4. ~~Save/load~~
 5. Track for NPCs' goal completion, keep memory of completed tasks, select new one(s)
 
 ## Support the author :heart:
