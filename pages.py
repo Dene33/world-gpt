@@ -6,31 +6,31 @@ from utils import add_tooltip, img_to_base64str
 PAGE_HOME = ui.TagList(
     ui.div(
         {"id": "page-0-content"},
-        ui.h1("Try it for free"),
-        ui.div(
-            ui.div(
-                ui.p(
-                    "Story Generator is a groundbreaking app that brings your imagination to life. \
-            Input your world description, and watch as an entire universe unfolds before your eyes. \
-            With ChatGPT as the backbone, witness the progression of your world and observe \
-            lifelike NPCs as they navigate its intricacies. Experience the joy of creation \
-            in real-time, all within the palm of your hand."
+        # ui.h1("Try it for free"),
+        ui.row(
+            ui.column(
+                6,
+                ui.input_action_button(
+                    "to_page_world_create",
+                    "Create new world",
+                    # class_="btn-primary main-page-button",
                 ),
-                class_="text-panel well",
+                style_="margin-top: 40px;",
             ),
-            ui.input_action_button(
-                "to_page_world_create",
-                "Create a new world",
-                class_="btn-primary main-page-button",
+            ui.column(
+                6,
+                ui.input_file(
+                        label="",
+                        id="upload_existing_world",
+                        button_label="Upload your world",
+                        accept=[".zip"],
+                        # class_="btn-primary main-page-button main-page-load-world"# disabled",
+                    ),
+                # class_="btn-primary main-page-button main-page-load-world",
+                style_="margin-top: 40px;",
             ),
-            ui.input_action_button(
-                "load_existing_world",
-                "Load existing world",
-                class_="btn-primary main-page-button main-page-load-world disabled",
-            ),
-            ui.output_text_verbatim("main"),
-            class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
         ),
+        class_="main-page-container col-lg-7 col-md-8 col-sm-10 col-12 mx-auto",
     ),
 )
 
@@ -285,6 +285,7 @@ PAGE_WORLD_INTERACT = ui.TagList(
                 value="npcs_nav_menu",
             ),
             id="world_interact_tabs",
+            footer=ui.download_button("download_world", "Save the world", style_="margin-top: 1rem;")
         ),
         ui.input_action_button(
             "to_page_world_updating",

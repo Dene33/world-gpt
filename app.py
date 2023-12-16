@@ -1,9 +1,10 @@
 import os
 from shiny import App, render, ui, reactive
+from shiny.types import FileInfo
 import shinyswatch
 from classes import Settings, Game
 from pathlib import Path
-from utils import ensure_dirs_exist
+from utils import ensure_dirs_exist, zip_files, unzip_files
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import uuid
 import asyncio
@@ -22,6 +23,7 @@ from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, image
 from logging import debug
 from dotenv import load_dotenv
 from io import StringIO
+import aiofiles
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -40,7 +42,7 @@ app_ui = ui.page_fluid(
     ),
     ui.tags.body(
         ui.navset_hidden(
-            # ui.nav("Home page", PAGE_HOME, value="page_home"),
+            ui.nav("Home page", PAGE_HOME, value="page_home"),
             ui.nav("Create a new world", PAGE_WORLD_CREATE, value="page_world_create"),
             ui.nav("Loading page", PAGE_WORLD_LOADING, value="page_world_loading"),
             ui.nav(
@@ -67,6 +69,33 @@ app_ui = ui.page_fluid(
 def server(input, output, session):
     progress_task_val = reactive.Value(None)
 
+    @reactive.Calc
+    async def upload_world() -> Path | None:
+        debug("World upload")
+        file: list[FileInfo] | None = input.upload_existing_world()
+
+        if file:
+            uploaded_file_path = Path(file[0]["datapath"])
+            unzip_path = Path("data") / "games"
+            unzip_path_extracted = await unzip_files(uploaded_file_path, unzip_path)
+
+            return unzip_path_extracted
+
+
+    @session.download(filename="story_generator_world.zip")
+    async def download_world():
+        game_task = await generate_world()
+        if game_task.done():
+            game = game_task.result()
+            zip_path = Path("data") / f'{game.cur_world.name}.zip'
+            zipped_file = await zip_files(game.game_path, zip_path)
+
+            async with aiofiles.open(zip_path, 'rb') as f:
+                data = await f.read()
+                yield data
+            
+            zip_path.unlink()
+
     # Switch to the world creation page
     @reactive.Effect
     @reactive.event(input.to_page_world_create)
@@ -75,7 +104,7 @@ def server(input, output, session):
 
     # Switch page to page_world_loading for the time of the world generation
     @reactive.Effect
-    @reactive.event(input.to_page_world_loading)
+    @reactive.event(input.to_page_world_loading, input.upload_existing_world)
     async def _():
         if input.API_key():
             env_stream = StringIO(f"OPENAI_API_KEY={input.API_key()}")
@@ -96,50 +125,68 @@ def server(input, output, session):
     @reactive.Calc
     async def generate_world():
         ensure_dirs_exist(
-            [DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH]
-        )
-        settings = Settings()
-        settings.load(path="./settings.yaml")
+                [DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH]
+            )
+        
+        unziped_game_path = await upload_world()
 
-        game = Game()
-        game.new_game(game_name=str(uuid.uuid4()))
+        if unziped_game_path:
+            debug("World upload, generate_world")
+            settings = Settings()
+            settings.load(path=unziped_game_path / "settings.yaml")
 
-        world_data = {
-            "name": input.new_world_name(),
-            "attributes": {"temperature": input.new_world_temperature()},
-            "time": {
-                "current_day": int(input.new_world_day()),
-                "current_month": int(input.new_world_month()),
-                "current_year": int(input.new_world_year()),
-                "current_era": str(input.new_world_era()),
-                "current_hour": int(input.new_world_hour()),
-                "current_minute": int(input.new_world_minute()),
-                "current_second": int(input.new_world_second()),
-            },
-            "tick_type": input.new_world_tick_type(),
-            "tick_rate": input.new_world_tick_rate(),
-            "current_state_prompt": input.new_world_description(),
-        }
+            game = Game()
+            game.game_name = unziped_game_path.stem
+            game.settings = settings
+            game.load_game()
 
-        settings_data = {
-            "number_of_npcs": int(input.new_world_npc_num()),
-        }
+            game_task = asyncio.create_task(game.init_world())
 
-        if "text_to_image_generate_world" in input.images_to_generate():
-            game.settings.text_to_image_generate_world = True
+            return game_task
         else:
-            game.settings.text_to_image_generate_world = False
+            settings = Settings()
+            settings.load(path="./settings.yaml")
 
-        if "text_to_image_generate_npcs" in input.images_to_generate():
-            game.settings.text_to_image_generate_npcs = True
-        else:
-            game.settings.text_to_image_generate_npcs = False
+            game = Game()
+            game.new_game(game_name=str(uuid.uuid4()))
+            game.settings = settings
 
-        game.settings_from_ui(settings_data)
+            world_data = {
+                "name": input.new_world_name(),
+                "attributes": {"temperature": input.new_world_temperature()},
+                "time": {
+                    "current_day": int(input.new_world_day()),
+                    "current_month": int(input.new_world_month()),
+                    "current_year": int(input.new_world_year()),
+                    "current_era": str(input.new_world_era()),
+                    "current_hour": int(input.new_world_hour()),
+                    "current_minute": int(input.new_world_minute()),
+                    "current_second": int(input.new_world_second()),
+                },
+                "tick_type": input.new_world_tick_type(),
+                "tick_rate": input.new_world_tick_rate(),
+                "current_state_prompt": input.new_world_description(),
+            }
 
-        game_task = asyncio.create_task(game.init_world(world_data))
+            settings_data = {
+                "number_of_npcs": int(input.new_world_npc_num()),
+            }
 
-        return game_task
+            if "text_to_image_generate_world" in input.images_to_generate():
+                game.settings.text_to_image_generate_world = True
+            else:
+                game.settings.text_to_image_generate_world = False
+
+            if "text_to_image_generate_npcs" in input.images_to_generate():
+                game.settings.text_to_image_generate_npcs = True
+            else:
+                game.settings.text_to_image_generate_npcs = False
+
+            game.settings_from_ui(settings_data)
+
+            game_task = asyncio.create_task(game.init_world(world_data))
+
+            return game_task
 
     # Every 3 seconds check if @reactive.Calc function `generate_world` is finished.
     # If not, continue checking every 3 seconds.
@@ -153,9 +200,10 @@ def server(input, output, session):
             ui.update_navs("pages", selected="page_world_interact")
             game = game_task.result()
             world_uuid = uuid.uuid4().hex
-            if game.settings.text_to_image_generate_world:
-                img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
-            else:
+
+            img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
+
+            if not game.settings.text_to_image_generate_world or not img_url.exists():
                 img_url = www_dir / "img/img_placeholder.png"
             image_render(world_uuid, img_url)
             world_nav = generate_world_tab(world_uuid, game, "world_nav")
@@ -170,10 +218,12 @@ def server(input, output, session):
             npcs = game.npcs
             for i, npc in enumerate(reversed(npcs)):
                 npc_uuid = uuid.uuid4().hex
-                if game.settings.text_to_image_generate_npcs:
-                    img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
-                else:
+
+                img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
+
+                if not game.settings.text_to_image_generate_npcs or not img_url.exists():
                     img_url = www_dir / "img/img_placeholder.png"
+
                 image_render(npc_uuid, img_url)
                 npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
                 ui.nav_insert(
@@ -250,10 +300,12 @@ def server(input, output, session):
             progress_task = None
             ui.update_navs("pages", selected="page_world_interact")
             world_uuid = uuid.uuid4().hex
-            if game.settings.text_to_image_generate_world:
-                img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
-            else:
+
+            img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
+
+            if not game.settings.text_to_image_generate_world or not img_url.exists():
                 img_url = www_dir / "img/img_placeholder.png"
+
             image_render(world_uuid, img_url)
             world_nav = generate_world_tab(world_uuid, game, "world_nav")
             ui.nav_remove("world_interact_tabs", "world_nav")
@@ -267,10 +319,12 @@ def server(input, output, session):
             npcs = game.npcs
             for i, npc in enumerate(reversed(npcs)):
                 npc_uuid = uuid.uuid4().hex
-                if game.settings.text_to_image_generate_npcs:
-                    img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
-                else:
+
+                img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
+
+                if not game.settings.text_to_image_generate_npcs or not img_url.exists():
                     img_url = www_dir / "img/img_placeholder.png"
+
                 image_render(npc_uuid, img_url)
                 npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
 

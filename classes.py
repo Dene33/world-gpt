@@ -352,11 +352,15 @@ class Game:
 
     def load_game(self):
         if self.existing_games:
-            self.game_name = prompt(
-                f"Choose the game to load: {', '.join(self.existing_games)} :",
-                validator=validators.NotInListValidator(self.existing_games),
-            )
+            # self.game_name = prompt(
+            #     f"Choose the game to load: {', '.join(self.existing_games)} :",
+            #     validator=validators.NotInListValidator(self.existing_games),
+            # )
             self.game_path = GAMES_PATH / self.game_name
+
+            self.existing_worlds = [
+                x.name for x in Path(self.game_path / "worlds").iterdir() if x.is_dir()
+            ]
 
             debug(
                 f"{bcolors.OKGREEN}The game: {self.game_name} is loaded{bcolors.ENDC}"
@@ -373,13 +377,14 @@ class Game:
         if world_data:
             new_or_load = "n"
         else:
-            new_or_load = prompt(
-                f"(L)oad existing world or create a (n)ew one? (l/n)",
-                validator=validators.NotInListValidator(
-                    ["N", "n", "new", "L", "l", "load"]
-                ),
-                validate_while_typing=True,
-            )
+            new_or_load = "l"
+            # new_or_load = prompt(
+            #     f"(L)oad existing world or create a (n)ew one? (l/n)",
+            #     validator=validators.NotInListValidator(
+            #         ["N", "n", "new", "L", "l", "load"]
+            #     ),
+            #     validate_while_typing=True,
+            # )
 
         # New World
         if new_or_load.lower() in ["n", "new"]:
@@ -622,11 +627,12 @@ class Game:
             self.input_handler(Input.init_world)
             return
 
-        world_name_to_load = prompt(
-            f"Choose the world to load: {', '.join(self.existing_worlds)} ",
-            validator=validators.NotInListValidator(self.existing_worlds),
-        )
-        self.cur_world_path = Path(self.game_path / "worlds" / world_name_to_load)
+        # world_name_to_load = prompt(
+        #     f"Choose the world to load: {', '.join(self.existing_worlds)} ",
+        #     validator=validators.NotInListValidator(self.existing_worlds),
+        # )
+
+        self.cur_world_path = Path(self.game_path / "worlds" / os.listdir(self.game_path / "worlds")[0])
         last_modified_world_yaml = get_last_modified_file(self.cur_world_path)
         load_yaml_to_dataclass(self.cur_world, last_modified_world_yaml)
 

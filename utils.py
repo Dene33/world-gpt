@@ -15,6 +15,9 @@ from logging import debug
 import aiofiles
 import base64
 import aiohttp
+import os
+import zipfile
+import shutil
 
 
 class bcolors:
@@ -44,8 +47,8 @@ class Input(StrEnum):
     quit_game = "quit_game"
 
 
-def get_last_modified_file(path):
-    files = [f for f in Path(path).iterdir() if f.is_file()]
+def get_last_modified_file(path, extension: str = '.yaml'):
+    files = [f for f in Path(path).iterdir() if f.is_file() and f.suffix == extension]
     if files:
         last_modified_file = max(files, key=lambda p: p.stat().st_mtime)
     else:
@@ -53,8 +56,8 @@ def get_last_modified_file(path):
     return last_modified_file
 
 
-def get_previous_to_last_modified_file(path):
-    files = [f for f in Path(path).iterdir() if f.is_file()]
+def get_previous_to_last_modified_file(path, extension: str = '.yaml'):
+    files = [f for f in Path(path).iterdir() if f.is_file() and f.suffix == extension]
     if len(files) > 1:
         last_modified_file = max(files, key=lambda p: p.stat().st_mtime)
         files.remove(last_modified_file)
@@ -64,8 +67,8 @@ def get_previous_to_last_modified_file(path):
     return previous_to_last_modified_file
 
 
-def get_oldest_modified_file(path):
-    files = [f for f in Path(path).iterdir() if f.is_file()]
+def get_oldest_modified_file(path, extension: str = '.yaml'):
+    files = [f for f in Path(path).iterdir() if f.is_file() and f.suffix == extension]
     if files:
         oldest_modified_file = min(files, key=lambda p: p.stat().st_mtime)
     else:
@@ -571,6 +574,28 @@ async def batch_image_generation(file_paths: typing.List[str],
         tasks.append(generate_and_save_image(file_path, img_prompt, **openai_kwargs))
 
     await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def zip_files(path, zip_file):
+    with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                zf.write(
+                    os.path.join(root, file),
+                    os.path.relpath(os.path.join(root, file),
+                                    os.path.join(path, "..")),
+                )
+
+# unzip files to defined path
+# get the path to the unzipped folder's child folder
+async def unzip_files(zip_file: Path, path: Path):
+    with zipfile.ZipFile(zip_file, "r") as zip_ref:
+        first_dir_name_in_zip = os.path.dirname(zip_ref.namelist()[0])
+        shutil.rmtree(path / first_dir_name_in_zip)
+        zip_ref.extractall(path)
+
+    # Return the name of the first directory in the zip file
+    return path / os.path.dirname(zip_ref.namelist()[0])
 
 
 if __name__ == "__main__":
