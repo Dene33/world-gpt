@@ -913,9 +913,6 @@ class Game:
         sys.exit(0)
 
     async def generate_images(self):
-        # In Shiny there is no way to read images from arbitrary file sysytem path (only predefined >public< one)
-        # So we display images from returned openai urls instead
-        # Nevertheless images are saved for the future use locally (there will be no way to display them for now though)
         image_paths = []
         img_prompts = []
 
