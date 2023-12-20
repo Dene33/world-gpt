@@ -235,7 +235,8 @@ async def request_openai(
                 if response_processors:
                     processed_response = response_content
                     for response_processor in response_processors:
-                        debug(processed_response)
+                        if verbose:
+                            debug(processed_response)
                         processed_response = response_processor(processed_response)
                 else:
                     processed_response = response_content
@@ -597,6 +598,14 @@ async def unzip_files(zip_file: Path, path: Path):
     # Return the name of the first directory in the zip file
     return path / os.path.dirname(zip_ref.namelist()[0])
 
+
+def check_openai_api_key(api_key):
+    try:
+        openai.Model.list(api_key=api_key)
+    except Exception as e:
+        return False
+    else:
+        return True
 
 if __name__ == "__main__":
     from classes import World, Npc, Settings

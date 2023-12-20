@@ -7,26 +7,26 @@ PAGE_HOME = ui.TagList(
     ui.div(
         {"id": "page-0-content"},
         # ui.h1("Try it for free"),
+        add_tooltip(
+            ui.input_password(
+                "API_key",
+                "OpenAI key",
+                placeholder="Provide your OpenAI key. Now it's GPT4 + Dall-e 3 so the free version is limited to N requests per month",
+                value="",
+                width="100%",
+            ),
+            "Your OpenAI API key. Optional",
+        ),
+        ui.output_ui(id="missing_api_key"),
         ui.row(
             ui.column(
                 6,
-                ui.input_action_button(
-                    "to_page_world_create",
-                    "Create new world",
-                    # class_="btn-primary main-page-button",
-                ),
+                ui.output_ui(id="new_world_button"),
                 style_="margin-top: 40px;",
             ),
             ui.column(
                 6,
-                ui.input_file(
-                        label="",
-                        id="upload_existing_world",
-                        button_label="Upload your world",
-                        accept=[".zip"],
-                        # class_="btn-primary main-page-button main-page-load-world"# disabled",
-                    ),
-                # class_="btn-primary main-page-button main-page-load-world",
+                ui.output_ui(id="upload_existing_world"),
                 style_="margin-top: 40px;",
             ),
         ),
@@ -181,16 +181,6 @@ from nearby castle.",
             ),
         ),
         add_tooltip(
-            ui.input_password(
-                "API_key",
-                "OpenAI key",
-                placeholder="Provide your OpenAI key. Now it's GPT4 + Dall-e 3 so the free version is limited to N requests per month",
-                value="",
-                width="100%",
-            ),
-            "Your OpenAI API key. Optional",
-        ),
-        add_tooltip(
             ui.input_checkbox_group(
                 "images_to_generate",
                 "Choose type of images to generate:",
@@ -313,13 +303,7 @@ PAGE_MISSING_API_KEY = ui.TagList(
                 ),
                 class_="text-panel well",
             ),
-            ui.input_action_button(
-                "to_page_world_create",
-                "Got it!",
-                width="100%",
-                style_="margin-top: 40px;",
-            ),
-            class_="main-page-container col-lg-9 col-md-12 col-sm-12 col-12 mx-auto",
+            class_="main-page-container col-lg-12 col-md-12 col-sm-12 col-12 mx-auto",
         ),
     ),
 )
