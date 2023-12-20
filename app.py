@@ -1,10 +1,10 @@
 import os
-from shiny import App, render, ui, reactive
+from shiny import App, render, ui, reactive, Inputs, Outputs, Session
 from shiny.types import FileInfo
 import shinyswatch
 from classes import Settings, Game
 from pathlib import Path
-from utils import ensure_dirs_exist, zip_files, unzip_files
+from utils import ensure_dirs_exist, zip_files, unzip_files, check_openai_api_key
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import uuid
 import asyncio
@@ -19,17 +19,15 @@ from pages import (
 from operator import attrgetter
 import logging
 from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, image_render
-
 from logging import debug
 from dotenv import load_dotenv
 from io import StringIO
 import aiofiles
 
-
 logging.basicConfig(level=logging.DEBUG)
 
 # Uncomment to disable logging and comment to enable logging
-# logging.disable(logging.DEBUG)
+logging.disable(logging.DEBUG)
 
 www_dir = Path(__file__).parent / "www"
 
@@ -66,13 +64,62 @@ app_ui = ui.page_fluid(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     progress_task_val = reactive.Value(None)
 
+    # Check if the API key is valid
     @reactive.Calc
-    async def upload_world() -> Path | None:
+    async def check_api_key() -> bool:
+        env_stream = StringIO(f"OPENAI_API_KEY={input.API_key()}")
+        load_dotenv(stream=env_stream, override=True)
+
+        if Path("openai_key").exists() and not input.API_key():
+            load_dotenv("openai_key", override=True)
+
+        api_key_valid = check_openai_api_key(str(os.environ.get("OPENAI_API_KEY")))
+
+        return api_key_valid
+    
+    # Render warning message if the API key is invalid
+    @output
+    @render.ui
+    async def missing_api_key():
+        api_key_valid = await check_api_key()
+
+        if not api_key_valid:
+            return PAGE_MISSING_API_KEY
+    
+    # Render the "Create new world" button if the API key is valid
+    @output
+    @render.ui
+    async def new_world_button():
+        api_key_valid = await check_api_key()
+
+        if api_key_valid:
+            return ui.input_action_button(
+                        "to_page_world_create",
+                        "Create new world",
+                    )
+
+    # Render the "Upload world" button if the API key is valid
+    @output
+    @render.ui
+    async def upload_existing_world():
+        api_key_valid = await check_api_key()
+
+        if api_key_valid:
+            return ui.input_file(
+                        label="",
+                        id="upload_world",
+                        button_label="Upload your world",
+                        accept=[".zip"],
+                    )
+
+    # Process the uploaded world, unzip it and return the path to the unzipped folder
+    @reactive.Calc
+    async def get_uploaded_filepath() -> Path | None:
         debug("World upload")
-        file: list[FileInfo] | None = input.upload_existing_world()
+        file: list[FileInfo] | None = input.upload_world()
 
         if file:
             uploaded_file_path = Path(file[0]["datapath"])
@@ -102,19 +149,10 @@ def server(input, output, session):
     async def _():
         ui.update_navs("pages", selected="page_world_create")
 
-    # Switch page to page_world_loading for the time of the world generation
+    # Switch page to page_world_loading for the time of the world generation or world upload
     @reactive.Effect
-    @reactive.event(input.to_page_world_loading, input.upload_existing_world)
+    @reactive.event(input.to_page_world_loading, input.upload_world)
     async def _():
-        if input.API_key():
-            env_stream = StringIO(f"OPENAI_API_KEY={input.API_key()}")
-            load_dotenv(stream=env_stream)
-        elif Path("openai_key").exists():
-            load_dotenv("openai_key")
-        else:
-            ui.update_navs("pages", selected="page_missing_api_key")
-            return
-
         # World generation running in the background
         game_task = await generate_world()
 
@@ -128,10 +166,9 @@ def server(input, output, session):
                 [DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH]
             )
         
-        unziped_game_path = await upload_world()
+        unziped_game_path = await get_uploaded_filepath()
 
         if unziped_game_path:
-            debug("World upload, generate_world")
             settings = Settings()
             settings.load(path=unziped_game_path / "settings.yaml")
 
