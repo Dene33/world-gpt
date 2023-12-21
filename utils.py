@@ -144,7 +144,7 @@ def save_yaml_from_data(save_path: Path, data: YamlDataClassConfig | typing.Any)
         yaml.dump(data, savefile, sort_keys=False)
 
 
-def yaml_from_str(data_str: str):
+def yaml_from_str(data_str: str) -> dict:
     # yaml.emitter.Emitter.process_tag = lambda self, *args, **kw: None
     if data_str.startswith("```yaml"):
         split_lines = data_str.split("\n")[1:-1]
@@ -575,6 +575,26 @@ async def batch_image_generation(file_paths: typing.List[str],
         tasks.append(generate_and_save_image(file_path, img_prompt, **openai_kwargs))
 
     await asyncio.gather(*tasks, return_exceptions=True)
+
+async def batch_completion(prompts: typing.List[str],
+                           openai_kwargs: dict) -> typing.List[str]:
+    """Generate completions from prompts in parallel
+
+    Args:
+        prompts (typing.List[str]): List of prompts
+        openai_kwargs (dict): Kwargs for openai request
+
+    Returns:
+        List[str]: List of completions
+    """
+    tasks = []
+
+    for prompt in prompts:
+        tasks.append(request_openai(prompt=prompt, **openai_kwargs))
+
+    completions = await asyncio.gather(*tasks, return_exceptions=True)
+
+    return completions
 
 
 async def zip_files(path, zip_file):
