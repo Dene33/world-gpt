@@ -250,7 +250,7 @@ class Game:
         other_npcs = [
             dataclass_to_dict_copy(npc, keys_to_delete)
             for npc in self.npcs
-            if npc != current_npc
+            if npc != current_npc and npc.name in current_npc.social_connections
         ]
 
         npc_new_state_request = npc_new_state.format(
