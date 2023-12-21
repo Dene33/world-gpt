@@ -29,6 +29,7 @@ from utils import (
     hour_to_daytime,
     base64str_to_img,
     batch_image_generation,
+    batch_completion,
     # debug,
 )
 import validators
@@ -216,12 +217,31 @@ class Game:
         return
 
     async def update_npcs(self):
+        update_npc_prompts = []
+
         for npc in self.npcs:
-            await self.update_npc(npc)
+            update_npc_prompts.append(self.get_update_npc_prompt(npc))
+
+        openai_kwargs = {
+            "model": self.settings.LLM_model,
+            "tries_num": self.settings.llm_request_tries_num,
+            "response_processors": [yaml_from_str, check_yaml_update_npc],
+            "verbose": self.settings.openai_verbose,
+            "api_key": os.environ.get("OPENAI_API_KEY"),
+        }
+
+        npcs_new_data = await batch_completion(update_npc_prompts, openai_kwargs=openai_kwargs)
+
+        for npc, npc_new_data in zip(self.npcs, npcs_new_data):
+            npc.current_state_prompt = npc_new_data["npc_new_state"]
+
+            for attribute_key in npc.attributes.keys():
+                new_attribute_value = npc_new_data["attributes"].get(attribute_key, 0)
+                npc.attributes[attribute_key] += new_attribute_value
 
         return
 
-    async def update_npc(self, current_npc: Npc):
+    def get_update_npc_prompt(self, current_npc: Npc):
         keys_to_delete = [
             key
             for key in self.npcs[0].__dict__.keys()
@@ -230,7 +250,7 @@ class Game:
         other_npcs = [
             dataclass_to_dict_copy(npc, keys_to_delete)
             for npc in self.npcs
-            if npc.name != current_npc.name
+            if npc != current_npc and npc.name in current_npc.social_connections
         ]
 
         npc_new_state_request = npc_new_state.format(
@@ -247,24 +267,7 @@ class Game:
             max_attribute_delta=self.settings.max_attribute_delta,
         )
 
-        npc_new_data = await request_openai(
-            model=self.settings.LLM_model,
-            prompt=npc_new_state_request,
-            tries_num=self.settings.llm_request_tries_num,
-            response_processors=[yaml_from_str, check_yaml_update_npc],
-            verbose=self.settings.openai_verbose,
-            api_key=os.environ.get("OPENAI_API_KEY"),
-        )
-
-        current_npc.current_state_prompt = npc_new_data["npc_new_state"]
-
-        for attribute_key in current_npc.attributes.keys():
-            new_attribute_value = npc_new_data["attributes"].get(attribute_key, 0)
-            current_npc.attributes[attribute_key] += new_attribute_value
-        # current_npc.attributes = npc_new_data["attributes"].copy()
-
-
-        return
+        return npc_new_state_request
 
     async def tick_increment(self):
         self.cur_time = to_datetime(
@@ -651,6 +654,8 @@ class Game:
         if not self.cur_npcs_path.exists():
             self.cur_npcs_path.mkdir(parents=True, exist_ok=True)
 
+        new_npc_prompts = []
+        # Create NPC placeholders and prompts
         for npc_num in range(self.settings.number_of_npcs):
             debug(
                 f"{bcolors.OKCYAN}Generating NPC {npc_num+1}/{self.settings.number_of_npcs}...{bcolors.ENDC}"
@@ -669,16 +674,21 @@ class Game:
                 global_goal=random.choice(self.global_goals),
             )
 
-            new_npc_data = await request_openai(
-                model=self.settings.LLM_model,
-                prompt=new_npc_prompt,
-                tries_num=self.settings.llm_request_tries_num,
-                response_processors=[yaml_from_str, check_yaml_new_npc],
-                verbose=self.settings.openai_verbose,
-                api_key=os.environ.get("OPENAI_API_KEY"),
-            )
+            new_npc_prompts.append(new_npc_prompt)
 
+        openai_kwargs = {
+            "model": self.settings.LLM_model,
+            "tries_num": self.settings.llm_request_tries_num,
+            "response_processors": [yaml_from_str, check_yaml_new_npc],
+            "verbose": self.settings.openai_verbose,
+            "api_key": os.environ.get("OPENAI_API_KEY"),
+        }
+        
+        # NPC batch generation
+        npcs_data = await batch_completion(new_npc_prompts, openai_kwargs=openai_kwargs)
 
+        # Save NPCs to yaml and self.npcs
+        for npc, new_npc_data in zip(self.npcs, npcs_data):
             self.save_npc(new_npc_data)
             new_npc_yaml_path = (
                 self.cur_npcs_path
@@ -686,7 +696,7 @@ class Game:
                 / f"npc_tick_{self.cur_world.current_tick}.yaml"
             )
 
-            load_yaml_to_dataclass(new_npc, new_npc_yaml_path)
+            load_yaml_to_dataclass(npc, new_npc_yaml_path)
 
             debug(
                 f"{bcolors.OKGREEN}NPC {new_npc.name} generated successfully{bcolors.ENDC}"
@@ -751,25 +761,29 @@ class Game:
         debug(
             f"{bcolors.OKCYAN}Generating social connections between NPCs...{bcolors.ENDC}"
         )
+        # If there is only one npc, skip social connections generation
+        if len(self.npcs) < 2:
+            self.npcs[0].social_connections = []
+            self.save_npc(self.npcs[0])
+            return
+
         keys_to_delete = [
             key
             for key in self.npcs[0].__dict__.keys()
             if key not in ["name", "global_goal", "current_state_prompt"]
         ]
 
+        social_connections_prompts = []
+
         for current_npc in self.npcs:
-            if len(self.npcs) < 2:
-                current_npc.social_connections = []
-                self.save_npc(current_npc)
-                break
-            other_npcs = []
+            corresponding_other_npcs = []
             for other_npc in self.npcs:
-                if current_npc.name == other_npc.name:
+                if current_npc == other_npc:
                     continue
                 npc_dict = dataclass_to_dict_copy(other_npc, keys_to_delete)
-                other_npcs.append([npc_dict])
-
-            create_social_connections_prompt = create_social_connections.format(
+                corresponding_other_npcs.append(npc_dict)
+            
+            created_social_connections_prompt = create_social_connections.format(
                 world_general_description=self.cur_world.current_state_prompt,
                 current_npc_name=current_npc.name,
                 current_npc_state=current_npc.current_state_prompt,
@@ -779,20 +793,24 @@ class Game:
                 ),
                 other_npcs=[
                     yaml.dump(npc, sort_keys=False, Dumper=YamlDumperDoubleQuotes)
-                    for npc in other_npcs
+                    for npc in corresponding_other_npcs
                 ],
             )
 
-            npc_social_connections = await request_openai(
-                model=self.settings.LLM_model,
-                prompt=create_social_connections_prompt,
-                tries_num=self.settings.llm_request_tries_num,
-                response_processors=[yaml_from_str],
-                verbose=self.settings.openai_verbose,
-                api_key=os.environ.get("OPENAI_API_KEY"),
-            )
+            social_connections_prompts.append(created_social_connections_prompt)
 
-            current_npc.social_connections = npc_social_connections
+        openai_kwargs = {
+            "model": self.settings.LLM_model,
+            "tries_num": self.settings.llm_request_tries_num,
+            "response_processors": [yaml_from_str],
+            "verbose": self.settings.openai_verbose,
+            "api_key": os.environ.get("OPENAI_API_KEY"),
+        }
+
+        npcs_social_connections = await batch_completion(social_connections_prompts, openai_kwargs=openai_kwargs)
+
+        for current_npc, current_npc_social_connections in zip(self.npcs, npcs_social_connections):
+            current_npc.social_connections = current_npc_social_connections
             self.save_npc(current_npc)
 
     def save_world(self):
