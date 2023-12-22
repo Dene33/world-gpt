@@ -64,142 +64,146 @@ from nearby castle.",
             ),
             "The prompt for ChatGPT to generate the world",
         ),
+        ui.h4("General settings", style_="text-align: center; width: 100%;"),
         ui.row(
             {"id": "create-world-settings"},
-            add_tooltip(
-                ui.input_numeric(
-                    "new_world_tick_rate", "Tick Rate", min=1, value=1, width="25%"
+            ui.column(
+                3,
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_npc_num",
+                        "# NPCs",
+                        [*range(1, 16)],
+                        selected=2,
+                        width="80%",
+                    ),
+                    "The number of NPCs in the world",
                 ),
-                "How much time of Tick Type passes between each tick. You can interact and observe the world between each tick",
             ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_tick_type",
-                    "Tick type",
-                    ["day", "year", "hour", "minute", "second"],
-                    width="25%",
+            ui.column(
+                3,
+                add_tooltip(
+                    ui.input_numeric(
+                        "new_world_temperature",
+                        "t (°C)",
+                        value=0,
+                        width="80%",
+                    ),
+                    "The initial temperature of the world",
                 ),
-                "The type of time that passes between each tick",
             ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_npc_num",
-                    "# NPCs",
-                    [*range(1, 16)],
-                    selected=2,
-                    width="25%",
+            ui.column(
+                6,
+                add_tooltip(
+                    ui.input_checkbox_group(
+                        "images_to_generate",
+                        "Choose type of images to generate:",
+                        {
+                            "text_to_image_generate_world": ui.span("World"),
+                            "text_to_image_generate_npcs": ui.span("Npcs"),
+                        },
+                        selected=[
+                            "text_to_image_generate_world",
+                            "text_to_image_generate_npcs",
+                        ],
+                        # width="33.3%"
+                    ),
+                    "Choose type of images to generate. It will take more time to generate the result",
                 ),
-                "The number of NPCs in the world",
             ),
-            add_tooltip(
-                ui.input_numeric(
-                    "new_world_temperature",
-                    "t (°C)",
-                    value=0,
-                    width="25%",
-                ),
-                "The initial temperature of the world",
-            ),
+            class_="text-panel",
+            style_="border-radius: 5px 5px 5px 5px/25px 25px 25px 5px;"
         ),
-        ui.row(
-            {"id": "create-world-datetime"},
-            add_tooltip(
-                ui.input_numeric("new_world_year", "Year", value=1000, width="25%"),
-                "The initial year of the world",
-            ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_era",
-                    "Era",
-                    ["AD", "BC"],
-                    width="25%",
+        ui.h4("Time settings", style_="text-align: center; width: 100%; margin-top: 1rem;"),
+        ui.div(
+            ui.row(
+                {"id": "create-world-datetime"},
+                add_tooltip(
+                    ui.input_numeric("new_world_year", "Year", value=1000, width="25%"),
+                    "The initial year of the world",
                 ),
-                "The initial era of the world",
-            ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_day",
-                    "Day",
-                    [*range(1, 32)],
-                    width="25%",
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_era",
+                        "Era",
+                        ["AD", "BC"],
+                        width="25%",
+                    ),
+                    "The initial era of the world",
                 ),
-                "The initial day of the world",
-            ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_month",
-                    "Month",
-                    {
-                        "1": "January",
-                        "2": "February",
-                        "3": "March",
-                        "4": "April",
-                        "5": "May",
-                        "6": "June",
-                        "7": "July",
-                        "8": "August",
-                        "9": "September",
-                        "10": "October",
-                        "11": "November",
-                        "12": "December",
-                    },
-                    width="25%",
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_day",
+                        "Day",
+                        [*range(1, 32)],
+                        width="25%",
+                    ),
+                    "The initial day of the world",
                 ),
-                "The initial month of the world",
-            ),
-        ),
-        ui.row(
-            add_tooltip(
-                ui.input_select(
-                    "new_world_hour",
-                    "Hour",
-                    [*range(0, 24)],
-                    selected=12,
-                    width="33.3%",
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_month",
+                        "Month",
+                        {
+                            "1": "January",
+                            "2": "February",
+                            "3": "March",
+                            "4": "April",
+                            "5": "May",
+                            "6": "June",
+                            "7": "July",
+                            "8": "August",
+                            "9": "September",
+                            "10": "October",
+                            "11": "November",
+                            "12": "December",
+                        },
+                        width="25%",
+                    ),
+                    "The initial month of the world",
                 ),
-                "The initial hour of the world",
             ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_minute",
-                    "Minute",
-                    [*range(0, 60)],
-                    selected=0,
-                    width="33.3%",
+            ui.row(
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_hour",
+                        "Hour",
+                        [*range(0, 24)],
+                        selected=12,
+                        width="33.3%",
+                    ),
+                    "The initial hour of the world",
                 ),
-                "The initial minute of the world",
-            ),
-            add_tooltip(
-                ui.input_select(
-                    "new_world_second",
-                    "Second",
-                    [*range(0, 60)],
-                    selected=0,
-                    width="33.3%",
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_minute",
+                        "Minute",
+                        [*range(0, 60)],
+                        selected=0,
+                        width="33.3%",
+                    ),
+                    "The initial minute of the world",
                 ),
-                "The initial second of the world",
+                add_tooltip(
+                    ui.input_select(
+                        "new_world_second",
+                        "Second",
+                        [*range(0, 60)],
+                        selected=0,
+                        width="33.3%",
+                    ),
+                    "The initial second of the world",
+                ),
             ),
-        ),
-        add_tooltip(
-            ui.input_checkbox_group(
-                "images_to_generate",
-                "Choose type of images to generate:",
-                {
-                    "text_to_image_generate_world": ui.span("World"),
-                    "text_to_image_generate_npcs": ui.span("Npcs"),
-                },
-                selected=[
-                    "text_to_image_generate_world",
-                    "text_to_image_generate_npcs",
-                ],
-            ),
-            "Choose type of images to generate. It will take more time to generate the result",
+            class_="text-panel",
+            style_="border-radius: 5px 5px 5px 5px/25px 25px 25px 5px;"
         ),
         ui.div(
             ui.input_action_button(
                 "to_page_world_loading",
                 "Create new world",
                 width="100%",
+                style_="margin-top: 1rem;"
             ),
         ),
         ui.tags.script(
@@ -277,11 +281,26 @@ PAGE_WORLD_INTERACT = ui.TagList(
             id="world_interact_tabs",
             footer=ui.download_button("download_world", "Save the world", style_="margin-top: 1rem;")
         ),
-        ui.input_action_button(
-            "to_page_world_updating",
-            ui.output_text("world_progress_button_text"),
-            width="100%",
+        ui.row(
+            ui.column(
+                3,
+                    ui.output_ui(id="world_tick_rate_input", style_="margin-top: 12px; width: 90%;"),
+            ),
+            ui.column(
+                3,
+                    ui.output_ui(id="world_tick_type_input", style_="margin-top: 12px; width: 90%;"),
+            ),
+            ui.column(
+                6,
+                ui.input_action_button(
+                    "to_page_world_updating",
+                    ui.output_text("world_progress_button_text"),
+                    width="100%",
+                    style_="height: 80%;",
+                ),
+            ),
         ),
+        
         class_="main-page-container col-lg-9 col-md-12 col-sm-12 col-12 mx-auto",
     )
 )

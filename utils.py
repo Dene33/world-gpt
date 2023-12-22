@@ -612,7 +612,10 @@ async def zip_files(path, zip_file):
 async def unzip_files(zip_file: Path, path: Path):
     with zipfile.ZipFile(zip_file, "r") as zip_ref:
         first_dir_name_in_zip = os.path.dirname(zip_ref.namelist()[0])
-        shutil.rmtree(path / first_dir_name_in_zip)
+        world_root_path = path / first_dir_name_in_zip
+        if world_root_path.exists():
+            shutil.rmtree(world_root_path)
+
         zip_ref.extractall(path)
 
     # Return the name of the first directory in the zip file
