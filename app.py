@@ -200,8 +200,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                     "current_minute": int(input.new_world_minute()),
                     "current_second": int(input.new_world_second()),
                 },
-                "tick_type": input.new_world_tick_type(),
-                "tick_rate": input.new_world_tick_rate(),
+                "tick_type": "day",
+                "tick_rate": 1,
                 "current_state_prompt": input.new_world_description(),
             }
 
@@ -291,14 +291,42 @@ def server(input: Inputs, output: Outputs, session: Session):
         else:
             reactive.invalidate_later(3)
             return "Loading..."
+        
+    @output
+    @render.ui
+    async def world_tick_rate_input():
+        selected_tick_rate = 1
+        
+        tick_rate = await get_world_data("cur_world.tick_rate")
+        if tick_rate != "Loading...":
+            selected_tick_rate = tick_rate
+
+        return ui.input_numeric(
+                    "world_tick_rate", "Tick Rate", min=1, value=selected_tick_rate, width="90%"
+                )
+    
+    @output
+    @render.ui
+    async def world_tick_type_input():
+        selected_tick_type = "day"
+
+        tick_type = await get_world_data("cur_world.tick_type")
+        if tick_type != "Loading...":
+            selected_tick_type = tick_type
+
+        return ui.input_select(
+                    "world_tick_type",
+                    "Tick type",
+                    ["day", "year", "hour", "minute", "second"],
+                    selected=selected_tick_type,
+                    width="90%",
+                ),
 
     # Display the World's tick rate and tick type in the button text
     @output
     @render.text
     async def world_progress_button_text():
-        tick_rate = await get_world_data("cur_world.tick_rate")
-        tick_type = await get_world_data("cur_world.tick_type")
-        return f"Wait {tick_rate} {tick_type}s"
+        return f"Wait {input.world_tick_rate()} {input.world_tick_type()}s"# {tick_rate} {tick_type}s"
 
     # Assign async task spawned with `async def progress_world(game: Game)` to Reactive.Value `progress_task_val`
     # Switch to page_world_updating with a spinning loading icon while the world is updating
@@ -308,6 +336,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         debug("Update the world")
         game_task = await generate_world()
         game = game_task.result()
+
+        game.cur_world.tick_rate = input.world_tick_rate()
+        game.cur_world.tick_type = input.world_tick_type()
 
         # Set Reactive.Value `progress_task_val` to the result (async task) of `progress_world` function
         progress_task = progress_task_val.set(await progress_world(game))
