@@ -18,7 +18,7 @@ from pages import (
 )
 from operator import attrgetter
 import logging
-from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, image_render
+from ui_modules.generate_tabs import generate_world_tab, generate_npc_tab, render_world_tab, render_npc_tab
 from logging import debug
 from dotenv import load_dotenv
 from io import StringIO
@@ -66,6 +66,8 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     progress_task_val = reactive.Value(None)
+    world_tab_inputs = reactive.Value()
+    npc_tabs_inputs: list[reactive.Value] = []
 
     # Check if the API key is valid
     @reactive.Calc
@@ -236,14 +238,21 @@ def server(input: Inputs, output: Outputs, session: Session):
             debug("invalidate_done")
             ui.update_navs("pages", selected="page_world_interact")
             game = game_task.result()
-            world_uuid = uuid.uuid4().hex
-
             img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
 
             if not game.settings.text_to_image_generate_world or not img_url.exists():
                 img_url = www_dir / "img/img_placeholder.png"
-            image_render(world_uuid, img_url)
-            world_nav = generate_world_tab(world_uuid, game, "world_nav")
+
+            world_tab_inputs.set(
+                    render_world_tab("world_tab",
+                        img_path=img_url,
+                        world_state=game.cur_world.current_state_prompt,
+                        date=game.current_date_to_str(),
+                        time=game.current_time_to_str(),
+                        temperature=game.cur_world.attributes["temperature"]
+                        )
+                    )
+            world_nav = generate_world_tab("world_tab", game, "world_nav")
             ui.nav_insert(
                 "world_interact_tabs",
                 world_nav,
@@ -254,15 +263,23 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui.nav_hide("world_interact_tabs", "npc_placeholder")
             npcs = game.npcs
             for i, npc in enumerate(reversed(npcs)):
-                npc_uuid = uuid.uuid4().hex
-
                 img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
 
                 if not game.settings.text_to_image_generate_npcs or not img_url.exists():
                     img_url = www_dir / "img/img_placeholder.png"
 
-                image_render(npc_uuid, img_url)
-                npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
+                npc_tabs_inputs.append(
+                    reactive.Value(
+                        render_npc_tab(npc.name.lower().replace(" ", "_"),
+                                img_path=img_url,
+                                npc_name=npc.name,
+                                npc_state=npc.current_state_prompt,
+                                npc_goal=npc.global_goal,
+                                npc_attributes=npc.attributes,
+                        )
+                    )
+                )
+                npc_nav = generate_npc_tab(npc.name.lower().replace(" ", "_"), npc, npc.name.lower().replace(" ", "_"))
                 ui.nav_insert(
                     "world_interact_tabs",
                     npc_nav,
@@ -340,6 +357,19 @@ def server(input: Inputs, output: Outputs, session: Session):
         game.cur_world.tick_rate = input.world_tick_rate()
         game.cur_world.tick_type = input.world_tick_type()
 
+        game.cur_world.current_state_prompt = world_tab_inputs().world_state()
+        game.cur_world.attributes["temperature"] = world_tab_inputs().world_temperature()
+
+        npcs = game.npcs
+        for i, npc in enumerate(reversed(npcs)):
+            npc.current_state_prompt = npc_tabs_inputs[i]().npc_state()
+            npc.global_goal = npc_tabs_inputs[i]().npc_goal()
+            for key in npc.attributes.keys():
+                npc.attributes[key] = int(npc_tabs_inputs[i]()[key]())
+
+        game.save_world()
+        game.save_npcs()
+
         # Set Reactive.Value `progress_task_val` to the result (async task) of `progress_world` function
         progress_task = progress_task_val.set(await progress_world(game))
         debug("to_page_world_updating", progress_task)
@@ -364,46 +394,41 @@ def server(input: Inputs, output: Outputs, session: Session):
         progress_task = progress_task_val.get()
         if progress_task.done():
             debug("invalidate_done")
-            game = progress_task.result()
+            game: Game = progress_task.result()
             progress_task = None
             ui.update_navs("pages", selected="page_world_interact")
-            world_uuid = uuid.uuid4().hex
 
             img_url = game.cur_world_path / f"world_tick_{game.cur_world.current_tick}.jpg"
 
             if not game.settings.text_to_image_generate_world or not img_url.exists():
                 img_url = www_dir / "img/img_placeholder.png"
 
-            image_render(world_uuid, img_url)
-            world_nav = generate_world_tab(world_uuid, game, "world_nav")
-            ui.nav_remove("world_interact_tabs", "world_nav")
-            ui.nav_insert(
-                "world_interact_tabs",
-                world_nav,
-                target="npcs_nav_menu",
-                position="before",
-            )
-            
+            world_tab_inputs.set(
+                    render_world_tab("world_tab",
+                        img_path=img_url,
+                        world_state=game.cur_world.current_state_prompt,
+                        date=game.current_date_to_str(),
+                        time=game.current_time_to_str(),
+                        temperature=game.cur_world.attributes["temperature"]
+                        )
+                    )
+
             npcs = game.npcs
             for i, npc in enumerate(reversed(npcs)):
-                npc_uuid = uuid.uuid4().hex
-
                 img_url = game.cur_world_path / f"npcs/{npc.name}/npc_tick_{game.cur_world.current_tick}.jpg"
 
                 if not game.settings.text_to_image_generate_npcs or not img_url.exists():
                     img_url = www_dir / "img/img_placeholder.png"
 
-                image_render(npc_uuid, img_url)
-                npc_nav = generate_npc_tab(npc_uuid, npc, npc.name.lower().replace(" ", "_"))
-
-                ui.nav_remove("world_interact_tabs", npc.name.lower().replace(" ", "_"))
-                ui.nav_insert(
-                    "world_interact_tabs",
-                    npc_nav,
-                    target="npc_placeholder",
-                    position="after",
+                npc_tabs_inputs[i].set(
+                    render_npc_tab(npc.name.lower().replace(" ", "_"),
+                                img_path=img_url,
+                                npc_name=npc.name,
+                                npc_state=npc.current_state_prompt,
+                                npc_goal=npc.global_goal,
+                                npc_attributes=npc.attributes,
+                        )
                 )
-
             ui.update_navs("world_interact_tabs", selected="world_nav")
 
             return "World is updated"
