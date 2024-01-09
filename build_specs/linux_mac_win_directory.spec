@@ -29,6 +29,7 @@ shiny = sitepackages / "shiny"
 langchain = sitepackages / "langchain"
 www = os.path.abspath("www")
 data = os.path.abspath("data")
+ui_modules = os.path.abspath("ui_modules")
 
 data_files = [
     ("../app.py", "."),
@@ -43,6 +44,7 @@ data_files = [
     ("../__init__.py", "."),
     (data, "./data"),
     (www, "./www"),
+    (ui_modules, "./ui_modules"),
 ]
 
 datas = data_files + sitepackages_list
