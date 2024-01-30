@@ -10,6 +10,10 @@ Story Generator is an app, available as a [web version](https://www.story-genera
 
 With ChatGPT as the backbone, create your own world and observe lifelike characters interacting with each other and living their lives. All that from a **single text input** with your world description! 
 
+## Video demo
+
+[![Watch the video](https://cdn.loom.com/sessions/thumbnails/8cd9860e343b43ad9d04a12055f16ee9-1705522236195-with-play.gif)](https://www.loom.com/embed/8cd9860e343b43ad9d04a12055f16ee9?sid=24642174-f674-4147-854f-eaf50fd791d2)
+
 ## Idea
 
 OpenAI's ChatGPT blew my mind and I got an idea about using it as a tool for world generation. But static worlds are boring! So I decided to add NPCs (non-playable characters) to see if they can interact in the evolving worlds and achieve their goals... It turns out that yes, they can! And it's super interesting to observe how they do that and what happens to them. That's how the Story Generator was born.
