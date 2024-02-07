@@ -305,24 +305,27 @@ PAGE_WORLD_INTERACT = ui.TagList(
     )
 )
 
-PAGE_MISSING_API_KEY = ui.TagList(
-    ui.div(
-        {"id": "page-0-content"},
-        ui.h1("API key is missing!"),
+
+def create_page_missing_api_key(header="API key is missing!", message='OpenAI API key is missing. Please provide it to be able to generate the world.'):
+    # return PAGE_MISSING_API_KEY
+    page_missing_api_key = ui.TagList(
         ui.div(
+            {"id": "page-0-content"},
+            ui.h1(header),
             ui.div(
-                ui.p(
-                    'OpenAI API key is missing. Please provide it to be able to generate the world.'
+                ui.div(
+                    ui.p(message),
+                    ui.a(
+                        "Get your OpenAI API key here",
+                        href="https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key",
+                        style_="color: #fff;",
+                        target="_blank",
+                    ),
+                    class_="text-panel well",
                 ),
-                ui.a(
-                    "Get your OpenAI API key here",
-                    href="https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key",
-                    style_="color: #fff;",
-                    target="_blank",
-                ),
-                class_="text-panel well",
+                class_="main-page-container col-lg-12 col-md-12 col-sm-12 col-12 mx-auto",
             ),
-            class_="main-page-container col-lg-12 col-md-12 col-sm-12 col-12 mx-auto",
         ),
-    ),
-)
+    )
+
+    return page_missing_api_key

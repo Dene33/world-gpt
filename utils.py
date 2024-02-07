@@ -622,11 +622,19 @@ async def unzip_files(zip_file: Path, path: Path):
     return path / os.path.dirname(zip_ref.namelist()[0])
 
 
-def check_openai_api_key(api_key):
+async def is_openai_api_key_valid(api_key, model="gpt-4-1106-preview"):
     try:
-        openai.Model.list(api_key=api_key)
+        response = await openai.ChatCompletion.acreate(
+                    api_key=api_key,
+                    model=model,
+                    messages=[{"role": "user", "content": "This is a test."}],
+                    max_tokens=5,
+        )
+        # openai.Model.list(api_key=api_key)
+    except openai.OpenAIError as e:
+        return e
     except Exception as e:
-        return False
+        return e
     else:
         return True
 

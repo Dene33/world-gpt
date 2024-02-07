@@ -1,10 +1,11 @@
 import os
+import openai
 from shiny import App, render, ui, reactive, Inputs, Outputs, Session
 from shiny.types import FileInfo
 import shinyswatch
 from classes import Settings, Game
 from pathlib import Path
-from utils import ensure_dirs_exist, zip_files, unzip_files, check_openai_api_key
+from utils import ensure_dirs_exist, zip_files, unzip_files, is_openai_api_key_valid
 from resources_paths import DATA_PATH, GAMES_PATH, YAML_TEMPLATES_PATH, INIT_WORLDS_PATH
 import uuid
 import asyncio
@@ -14,7 +15,8 @@ from pages import (
     PAGE_WORLD_LOADING,
     PAGE_WORLD_INTERACT,
     PAGE_WORLD_UPDATING,
-    PAGE_MISSING_API_KEY
+    # PAGE_MISSING_API_KEY
+    create_page_missing_api_key,
 )
 from operator import attrgetter
 import logging
@@ -55,7 +57,8 @@ app_ui = ui.page_fluid(
             ),
             ui.nav(
                 "Missing API key",
-                PAGE_MISSING_API_KEY,
+                # PAGE_MISSING_API_KEY,
+                create_page_missing_api_key(),
                 value="page_missing_api_key",
             ),
             id="pages",
@@ -78,7 +81,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         if Path("openai_key").exists() and not input.API_key():
             load_dotenv("openai_key", override=True)
 
-        api_key_valid = check_openai_api_key(str(os.environ.get("OPENAI_API_KEY")))
+        api_key_valid = await is_openai_api_key_valid(str(os.environ.get("OPENAI_API_KEY")))
 
         return api_key_valid
     
@@ -87,9 +90,21 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
     async def missing_api_key():
         api_key_valid = await check_api_key()
+        
+        if api_key_valid != True:
+            header = 'API key is missing or invalid!'
+            message = 'OpenAI API key is missing or invalid. Please provide it to be able to generate the world.'
 
-        if not api_key_valid:
-            return PAGE_MISSING_API_KEY
+            if isinstance(api_key_valid, openai.OpenAIError):
+                error_code = api_key_valid.error.code
+                if error_code in ['invalid_api_key']:
+                    header = 'API key is missing or invalid!'
+                    message = 'OpenAI API key is missing or invalid. Please provide it to be able to generate the world.'
+                elif error_code in ['insufficient_quota']:
+                    header = 'Default API key limit is reached'
+                    message = "I provide my own OpenAI API key by default. Due to high demand my API usage this month has reached the account's monthly budget. Either use your own API key or support me (the Developer) by buying the app so I could increase the limits"
+
+            return create_page_missing_api_key(header, message)
     
     # Render the "Create new world" button if the API key is valid
     @output
@@ -97,7 +112,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     async def new_world_button():
         api_key_valid = await check_api_key()
 
-        if api_key_valid:
+        if api_key_valid == True:
             return ui.input_action_button(
                         "to_page_world_create",
                         "Create new world",
@@ -109,7 +124,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     async def upload_existing_world():
         api_key_valid = await check_api_key()
 
-        if api_key_valid:
+        if api_key_valid == True:
             return ui.input_file(
                         label="",
                         id="upload_world",
